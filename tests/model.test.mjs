@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {calculate,defaults,examples,irr,health} from '../dist/model.js';
+const simple={...examples[0],upfront:1000,data:0,training:0,compute:0,storage:0,maintenance:0,oversight:0,direct:1200,indirect:0,hours:0,adoption:100,ramp:1,delay:0,growth:0,costGrowth:0};
+test('Known monthly cash schedule gives correct NPV, ROI and payback',()=>{const r=calculate(simple,{...defaults,rate:0,years:2});assert.equal(r.npv,1400);assert.equal(r.payback,10);assert.equal(r.roi,1.4);assert.equal(r.flows.length,25);});
+test('Annual IRR correctly annualizes a monthly root',()=>{assert.ok(Math.abs(irr([-1000,1100])-Math.pow(1.1,12)+1)<1e-8);});
+test('Discounted NPV matches independent annuity equation',()=>{const rate=.12,m=Math.pow(1+rate,1/12)-1,r=calculate(simple,{...defaults,years:2});const expected=-1000+100*(1-Math.pow(1+m,-24))/m;assert.ok(Math.abs(r.npv-expected)<1e-7);assert.ok(r.discountedPayback>r.payback);});
+test('No benefits gives negative NPV, no IRR and no payback',()=>{const r=calculate({...simple,direct:0});assert.equal(r.npv,-1000);assert.equal(r.irr,null);assert.equal(r.payback,null);});
+test('Delay defers benefits while operating expenses continue',()=>{const r=calculate({...simple,compute:120,delay:2});assert.equal(r.flows[1],-10);assert.equal(r.flows[2],-10);assert.equal(r.flows[3],90);});
+test('Adoption and indirect cash qualification apply once',()=>{const r=calculate({...simple,adoption:50,indirect:1200,indirectCash:50},{...defaults,rate:0,years:2});assert.equal(r.totalBenefits,1800);});
+test('Capacity excluded by default and included only explicitly',()=>{const p={...simple,hours:100,hourly:20,realization:50};assert.equal(calculate(p).npv,calculate(simple).npv);assert.ok(calculate(p,{...defaults,capacity:true}).npv>calculate(p).npv);assert.equal(calculate(p).capacity,1000);});
+test('Higher discount and costs reduce NPV; benefits increase NPV',()=>{const base=calculate(examples[0]);assert.ok(calculate(examples[0],{...defaults,rate:20}).npv<base.npv);assert.ok(calculate(examples[0],{...defaults,costFactor:120}).npv<base.npv);assert.ok(calculate(examples[0],{...defaults,benefitFactor:120}).npv>base.npv);});
+test('Non conventional cash flows are not assigned ambiguous IRR',()=>{assert.equal(irr([-100,230,-132]),null);});
+test('Reference leading indicator escalation thresholds',()=>{const p={...examples[0],adoption:10,age:6,sponsor:'Missing'};assert.equal(health(p).action,'Escalate');assert.equal(calculate(p).recommendation,'Intervene');assert.equal(calculate(examples[3]).recommendation,'Intervene');});
+test('All five examples produce finite monthly and portfolio values',()=>{for(const p of examples){for(const s of [defaults,{...defaults,benefitFactor:75,costFactor:120,delay:3},{...defaults,years:10,capacity:true}]){const r=calculate(p,s);assert.ok(Number.isFinite(r.npv));assert.ok(r.flows.every(Number.isFinite));assert.ok(Math.abs(r.totalBenefits-r.totalCosts-r.cumulative.at(-1))<1e-6);}}});
