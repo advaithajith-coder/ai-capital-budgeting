@@ -70,7 +70,7 @@ Skipped detail is never guessed: unrated risks stay neutral and are flagged, mis
 
 **Shared IT costs**: platform and tooling costs grouped into categories, each split by its own basis (compute spend, data engineers, live projects, data sensitivity, people or equal), then totalled by department and charged to each project.
 
-![Shared IT costs split by department](docs/screenshots/shared-it.png)
+![Shared IT cost categories with annual cost and split basis](docs/screenshots/shared-it.png)
 
 **Evidence & health**: forecast vs evidence-adjusted value, then per-project health, probability of success, readiness, compliance and unit cost.
 
