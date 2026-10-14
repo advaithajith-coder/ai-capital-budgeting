@@ -113,3 +113,15 @@ test('Inputs are exported in workbook units', () => {
   assert.equal(row.get(colOf('Implementation ($)')).value, examples[0].upfront);
   assert.equal(row.get(colOf('In portfolio')).value, 'Yes');
 });
+
+test('Every cell has an explicit white background so text stays readable in dark mode', () => {
+  const wb = buildWorkbook(freshState()),
+    styles = wb.files()['xl/styles.xml'],
+    fills = [...styles.matchAll(/<fill>(.*?)<\/fill>/g)].map(m => m[1]),
+    paper = fills.findIndex(f => f.includes('FFFFFFFF'));
+  assert.ok(paper > 1);
+  assert.match(styles, new RegExp(`<cellStyleXfs count="1"><xf [^>]*fillId="${paper}"`));
+  const xfs = [...styles.matchAll(/<xf numFmtId="\d+" fontId="\d+" fillId="(\d+)"/g)].map(m => +m[1]);
+  assert.ok(xfs.length > 1);
+  assert.ok(xfs.every(id => id >= 2), 'no cell format may use the transparent fill');
+});

@@ -29,6 +29,8 @@ const FONT = {
 const FILL = {
   none: '<fill><patternFill patternType="none"/></fill>',
   gray125: '<fill><patternFill patternType="gray125"/></fill>',
+  // White "paper" background: without it, Excel's dark mode draws unfilled cells dark under dark text.
+  paper: '<fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/><bgColor indexed="64"/></patternFill></fill>',
   header:
     '<fill><patternFill patternType="solid"><fgColor rgb="FF315DE8"/><bgColor indexed="64"/></patternFill></fill>',
   key: '<fill><patternFill patternType="solid"><fgColor rgb="FFFFFF00"/><bgColor indexed="64"/></patternFill></fill>',
@@ -60,7 +62,7 @@ class Styles {
   // Style spec: { font, fill, fmt, align, wrap, indent }. Returns the cellXfs index.
   id(spec = {}) {
     const given = Object.fromEntries(Object.entries(spec).filter(([, v]) => v !== undefined)),
-      s = { font: 'normal', fill: 'none', fmt: 'general', align: '', wrap: false, ...given },
+      s = { font: 'normal', fill: 'paper', fmt: 'general', align: '', wrap: false, ...given },
       key = JSON.stringify(s);
     if (!FORMAT[s.fmt] || !FONT[s.font] || !FILL[s.fill]) throw new Error('Unknown style: ' + key);
     if (!this.index.has(key)) {
@@ -81,7 +83,7 @@ class Styles {
       })
       .join('');
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="${custom.length}">${custom.map(([id, code]) => `<numFmt numFmtId="${id}" formatCode="${xml(code)}"/>`).join('')}</numFmts><fonts count="${this.fonts.length}">${this.fonts.map(f => FONT[f]).join('')}</fonts><fills count="${this.fills.length}">${this.fills.map(f => FILL[f]).join('')}</fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${this.xfs.length}">${xf}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="${custom.length}">${custom.map(([id, code]) => `<numFmt numFmtId="${id}" formatCode="${xml(code)}"/>`).join('')}</numFmts><fonts count="${this.fonts.length}">${this.fonts.map(f => FONT[f]).join('')}</fonts><fills count="${this.fills.length}">${this.fills.map(f => FILL[f]).join('')}</fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="${this.fills.indexOf('paper')}" borderId="0" applyFill="1"/></cellStyleXfs><cellXfs count="${this.xfs.length}">${xf}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
   }
 }
 
