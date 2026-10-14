@@ -1,6 +1,6 @@
 # Architecture
 
-AI Capital is a browser-local executive portfolio application with a pure deterministic financial engine. It is delivered as a static private Site and also runs locally without dependencies.
+AI Capital is a browser-local executive portfolio application with a pure deterministic financial engine. It is deployed as a static site on Vercel (`vercel.json` serves `dist/`, no build step) and also runs locally without dependencies.
 
 ## Modules
 

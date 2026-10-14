@@ -28,4 +28,4 @@ Use “modeled”, “forecast” and “illustrative” wherever confidence cou
 
 ## Component sourcing
 
-The workspace was empty. The 21st catalog search was attempted but could not reach the npm registry in this environment, so the app uses original dependency-free components and documented tokens. No external component code was retrieved. Browser font availability does not affect functionality.
+The app uses original dependency-free components and the documented tokens above; no external component code is used. Browser font availability does not affect functionality.

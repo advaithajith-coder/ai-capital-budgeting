@@ -35,4 +35,4 @@ This is a working browser-local MVP. There is no LLM funding agent, user authent
 
 ## Changes and validation
 
-Run the full suite (`npm test`) for model or portfolio logic changes. When adding a project field, add it to `projectDefaults` so examples and older saves receive it. Verify representative interactions in a browser when available. Preserve the private Sites audience. Do not persist repository credentials. Source reference includes inconsistent payback summaries; explain and independently calculate instead of reproducing them blindly.
+Run the full suite (`npm test`) for model or portfolio logic changes. When adding a project field, add it to `projectDefaults` so examples and older saves receive it. Verify representative interactions in a browser when available. Hosting is Vercel: `vercel.json` serves `dist/` with no build step. A Vercel production URL is public unless Deployment Protection is enabled, so keep all example data illustrative. Do not persist repository credentials. Source reference includes inconsistent payback summaries; explain and independently calculate instead of reproducing them blindly.

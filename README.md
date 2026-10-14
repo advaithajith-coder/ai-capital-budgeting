@@ -32,6 +32,10 @@ Run `npm start` and open http://127.0.0.1:4173. Run `npm test` for the financial
 
 Read [architecture](docs/ARCHITECTURE.md), [implementation plan](docs/PLAN.md), [design](docs/DESIGN.md), [metrics and reference mapping](docs/METRICS.md), and [agent instructions](claude.md).
 
+## Deploy on Vercel
+
+Import the GitHub repository in Vercel. `vercel.json` already sets the output directory to `dist` with no build step, so the defaults work. Production URLs are public unless you enable Deployment Protection in the Vercel project settings.
+
 ## Scope
 
 Data is saved in the current browser only. Figures are illustrative, nominal and before tax; projects are assumed independent. Live changes mean immediate assumption recalculation. Company accounts, shared storage, approval workflows, actual-vs-forecast tracking, telemetry integrations and a language-model agent are later phases.
