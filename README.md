@@ -32,20 +32,25 @@ Five editable illustrative projects use the reference's AI value, evidence and h
 
 ## Adding a project: the questionnaire
 
-**＋ Add automation** opens an eight-step questionnaire that builds the whole business case. Nothing is copied from an example, so every number in a new case was entered on purpose.
+**＋ Add automation** opens a short questionnaire: four core steps build a complete business case, and four optional steps add detail when it is known. Nothing is copied from an example, so every number in a new case was entered on purpose.
+
+**Core steps (about 20 questions)**
 
 1. **The idea**: name, department, executive owner, stage and the problem it solves.
-2. **One-time costs**: implementation, data preparation, training and change management.
-3. **Running costs**: compute, storage, maintenance, human oversight, and optional usage-based cost per transaction with annual volume.
-4. **Estimated benefits**: direct cash savings, indirect gains and the share that is real cash, and recovered hours (kept separate from cash), with a reminder not to count the same labour twice.
-5. **Rollout**: adoption, ramp-up, delay, and the tech team needed by role. Free people are assigned from the bench.
-6. **Readiness**: delivery risks, data sensitivity, AI risk level, and security, legal and model-risk approvals.
-7. **Evidence**: the business KPI with baseline, target and latest value, sponsor engagement and model health.
-8. **Review**: every section with an edit link, the full result and warnings (unverified baseline, possible double counting, missing approvals, people not free to assign).
+2. **Costs**: one-time costs (implementation, data preparation, training) and running costs (compute, storage, maintenance, human oversight).
+3. **Estimated benefits**: direct cash savings, indirect gains and the share that is real cash, plus adoption, ramp-up and delay.
+4. **Review**: the result (NPV, payback, ROI, risk-adjusted NPV, probability of success, recommendation), every section with an edit link, and warnings.
 
-Required fields are checked before moving on, unknowns can be left blank and are flagged rather than guessed, and a live preview of Year-1 funding, NPV, risk-adjusted NPV and payback updates as you type.
+**Optional detail, added from Review**
 
-| A step with the live preview | The review step |
+- **Usage & capacity**: cost per transaction × volume, approved compute budget, and recovered hours (kept separate from cash).
+- **Tech team**: people needed by role and run support; free people are assigned from the bench.
+- **Readiness**: delivery risks, data sensitivity, AI risk level, and security, legal and model-risk approvals.
+- **Evidence**: the business KPI with baseline, target and latest value, sponsor engagement and model health.
+
+Skipped detail is never guessed: unrated risks stay neutral and are flagged, missing approvals block pilots, and without team needs no team cost or staffing delay is modelled. Review lists each of these as a warning. Required fields are checked before moving on, and a live preview of Year-1 funding, NPV, risk-adjusted NPV and payback updates as you type.
+
+| A core step with the live preview | Review, with one detail step added |
 |---|---|
 | ![Questionnaire step: estimated benefits with live preview](docs/screenshots/questionnaire.png) | ![Questionnaire review: every section, result and warnings](docs/screenshots/questionnaire-review.png) |
 

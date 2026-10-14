@@ -8,7 +8,7 @@ The primary user is a C-level capital allocator asking where AI investment creat
 
 Use a quiet light workspace with a white navigation rail, pale gray content canvas, restrained blue interaction accents, and green/amber/red semantic signals. Manrope headings and DM Sans body text use system sans-serif fallbacks. Tokens are in `dist/style.css`: background `#f6f7f9`, text `#1b2535`, border `#e5e9ee`, primary `#315de8`, positive `#198568`, watch `#b87924`, negative `#c65656`. No imagery is needed for an analytical decision workspace.
 
-Cards carry metrics or charts. Financial tables remain horizontally scrollable on narrow screens. Project editing opens a side panel so the executive keeps the portfolio context. Forms group upfront/operating costs, estimated benefits/delivery, tech team, usage and unit economics, readiness and compliance, and evidence/health. New investments are created through a stepped questionnaire with a live preview and a review step. Scenario sliders show exact numeric values and immediately update outputs.
+Cards carry metrics or charts. Financial tables remain horizontally scrollable on narrow screens. Project editing opens a side panel so the executive keeps the portfolio context. Forms group upfront/operating costs, estimated benefits/delivery, tech team, usage and unit economics, readiness and compliance, and evidence/health. New investments are created through a short questionnaire: four core steps with a live preview, then a review step from which optional detail (usage, team, readiness, evidence) can be added. Detail steps return to Review. Scenario sliders show exact numeric values and immediately update outputs.
 
 ## Information hierarchy
 

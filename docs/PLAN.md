@@ -5,7 +5,7 @@
 - Executive portfolio with five automation examples: aggregated NPV (with risk-adjusted value), payback, ROI on total costs, initial capital and Year-1 funding request.
 - Project comparison with inclusion controls, baseline quality, risk-adjusted NPV and action recommendations with cautions.
 - Funding plan by year: one-time costs, running costs, total spend, estimated benefits and total cost of ownership.
-- Eight-step questionnaire for new automations (idea, one-time costs, running costs, estimated benefits, rollout and team needs, readiness, evidence, review) with a live preview; nothing is inherited from an example.
+- Questionnaire for new automations: four core steps (idea, costs, estimated benefits with rollout, review) and four optional detail steps opened from Review (usage & capacity, tech team, readiness, evidence), with a live preview; nothing is inherited from an example and skipped detail is flagged, not guessed.
 - Live business case editor for complete costs, four-part value model, delivery assumptions, unit economics, readiness, compliance, team needs and a reasoned probability override.
 - Base/downside/upside cases, interactive benefit, cost and delay controls, and a project or portfolio scope selector with scenario comparison.
 - Break-even ("what has to be true"), two-variable sensitivity matrix and one-at-a-time sensitivity outputs.

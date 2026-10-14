@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defaults, examples, calculate, paybackMonths, sharedAllocation } from '../dist/model.js';
 import { freshState, migrateSaved, aggregate, roleUsage, moveTeam, withShares } from '../dist/portfolio.js';
-import { wizardBlank, buildProject } from '../dist/wizard.js';
+import { wizardBlank, wizardSteps, coreSteps, detailSteps, buildProject } from '../dist/wizard.js';
 
 // A save from before the readiness, team and probability fields existed.
 const oldSave = () => {
@@ -145,4 +145,33 @@ test('Shared IT share is a fixed monthly cost, scaled by the cost multiplier and
   assert.ok(Math.abs(on.shared.totalCost - annual * st.settings.years) < 1e-6);
   assert.equal(off.shared.totalCost, 0);
   assert.ok(Math.abs(up.shared.annual - annual * 1.2) < 1e-6);
+});
+
+test('Questionnaire has four core steps, optional detail, and asks every field once', () => {
+  assert.deepEqual(coreSteps.map(x => x.key), ['idea', 'costs', 'benefits', 'review']);
+  assert.deepEqual(detailSteps.map(x => x.key), ['usage', 'team', 'readiness', 'evidence']);
+  const asked = wizardSteps.flatMap(x => (x.fields || []).filter(f => f[2] !== 'heading').map(f => f[0]));
+  assert.equal(new Set(asked).size, asked.length);
+  assert.deepEqual([...asked].sort(), Object.keys(wizardBlank).sort());
+  for (const x of detailSteps) assert.ok(x.why, x.key);
+  const required = x => (x.fields || []).filter(f => f[3]?.required).map(f => f[0]);
+  for (const x of detailSteps) assert.deepEqual(required(x), [], x.key + ' must stay optional');
+  assert.deepEqual(coreSteps.flatMap(required).sort(), ['adoption', 'compute', 'direct', 'name', 'owner', 'ramp', 'team', 'upfront']);
+});
+
+test('Skipping every detail step still builds a valid, flagged project', () => {
+  const st = freshState(),
+    draft = { ...wizardBlank, name: 'Quick idea', team: 'Legal', owner: 'GC', upfront: '100000', compute: '10000', direct: '200000', adoption: '60', ramp: '3' },
+    p = { ...buildProject(draft, roleUsage(st.projects, st.settings.team)), id: 'quick' };
+  assert.equal(p.kpi, 'Define business KPI');
+  assert.equal(p.unit, 'units');
+  assert.equal(p.baseline, 'Missing');
+  assert.equal(p.dataReadiness, 'Not assessed');
+  assert.deepEqual(p.alloc, { ml: 0, data: 0, sw: 0, ops: 0 });
+  assert.ok(migrateSaved({ ...st, projects: [...st.projects, p] }));
+  const r = calculate(p, withShares([...st.projects, p], st.settings));
+  assert.equal(r.recommendation, 'Validate');
+  assert.equal(r.team.planned, false);
+  assert.equal(r.success.unassessed.length, 4);
+  assert.ok(Number.isFinite(r.npv));
 });

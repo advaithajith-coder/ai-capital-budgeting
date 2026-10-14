@@ -1407,3 +1407,54 @@ select.mini {
   display: block;
   margin-top: 2px;
 }
+.wizard-heading {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  margin: 6px 0 0;
+  color: var(--ink);
+}
+.wizard-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: -8px 0 18px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.chip {
+  border: 1px dashed #c8d0dc;
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 10.5px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.chip.added {
+  border-style: solid;
+  border-color: #bfe3d6;
+  background: #f4fbf8;
+}
+.chip.current {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.review-sub {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  margin: 6px 0 -2px;
+}
+.wizard-review .add-detail {
+  border-style: dashed;
+  border-color: #c8d0dc;
+}
+.add-detail p {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 6px 0 10px;
+  line-height: 1.45;
+}
+.add-detail .btn {
+  padding: 6px 12px;
+}

@@ -10,7 +10,7 @@ import {
   moveTeam as move,
   withShares,
 } from './portfolio.js';
-import { wizardBlank, wizardSteps, buildProject } from './wizard.js';
+import { wizardBlank, wizardSteps, coreSteps, detailSteps, buildProject } from './wizard.js';
 // Every project calculation includes its share of shared IT costs, allocated across all projects.
 const calc = (p, s = state.settings, projects = state.projects) => calculate(p, withShares(projects, s));
 const $ = q => document.querySelector(q);
@@ -729,8 +729,12 @@ function closeDetail() {
   $(`[data-project="${id}"]`)?.focus();
 }
 const wizardProject = d => buildProject(d, roleUsage());
-let wiz = { step: 0, draft: { ...wizardBlank } };
+const stepByKey = k => wizardSteps.find(x => x.key === k);
+let wiz = { step: 'idea', draft: { ...wizardBlank }, reviewed: false };
+// A detail step counts as added once any of its answers differs from the blank draft.
+const detailAdded = step => step.fields.some(([k]) => String(wiz.draft[k] ?? '') !== String(wizardBlank[k] ?? ''));
 function wizardField([key, label, type, o = {}]) {
+  if (type === 'heading') return `<h3 class="wizard-heading">${esc(label)}</h3>`;
   const v = wiz.draft[key] ?? '',
     req = o.required ? ' required' : '';
   let input;
@@ -790,13 +794,59 @@ function wizardReview() {
       'A usage-based cost is entered without annual volume, so it has no effect.',
     r.team.planned && r.team.stalled && `No ${r.team.bottleneck} are free, so benefits never start. Free people on the Tech team page.`, r.team.planned && !r.team.stalled && r.team.coverage < 1 && `Only ${r.team.assigned} of ${r.team.needed} needed people are free, so full benefit takes ${months(r.team.monthsToFull)} instead of ${months(r.team.baseMonthsToFull)}.`, !r.team.planned && 'No tech team need entered, so team cost and staffing delays are not modelled.',
   ].filter(Boolean);
-  return `<div class="wizard-review">${section('The idea', 0, [row('Automation', esc(p.name)), row('Owner', `${esc(p.owner)} · ${esc(p.team)}`), row('Stage', `${esc(p.stage)} · ${p.age} months live`)])}${section('Costs', 1, [row('Initial capital', money(r.cap)), row('Annual running costs', money(r.op)), row('Year-1 funding request', money(r.fundingRequest)), row('Usage-based cost', p.unitCost && p.volume ? `${unitMoney(p.unitCost)} per unit · ${Math.round(p.volume).toLocaleString('en-US')} ${esc(p.volumeUnit)}/yr` : 'None')])}${section('Estimated benefits', 3, [row('Direct savings', money(p.direct) + '/yr'), row('Cash share of indirect gains', money((p.indirect * p.indirectCash) / 100) + '/yr'), row('Capacity value', `${money(r.capacity)}/yr ${state.settings.capacity ? '(included)' : '(reported, not in cash)'}`)])}${section('Rollout', 4, [row('Tech team', r.team.planned ? `${r.team.assigned} of ${r.team.needed} needed are free to assign · ${r.team.stalled ? 'benefits never start' : 'full benefit in ' + months(r.team.monthsToFull)}` : 'No team need entered'), row('Adoption', p.adoption + '%'), row('Ramp', p.ramp + (p.ramp === 1 ? ' month' : ' months')), row('Delay', p.delay + (p.delay === 1 ? ' month' : ' months'))])}${section('Readiness & compliance', 5, [row('Probability of success', `${Math.round(r.success.value)}%${r.success.unassessed.length ? ' · ' + r.success.unassessed.length + ' not assessed' : ''}`), row('Delivery readiness', esc(r.readiness.status)), row('Compliance', esc(r.compliance.status) + (r.compliance.missing.length ? ' · ' + esc(r.compliance.missing.join(', ')) : '')), row('Data · AI risk', `${esc(p.dataSensitivity)} · ${esc(p.aiRisk)}`)])}${section('Evidence', 6, [row('KPI', `${esc(p.kpi)}: ${p.before} → ${p.target} ${esc(p.unit)}`), row('Baseline', esc(p.baseline)), row('Health', `${r.health.action} · sponsor ${esc(p.sponsor)}`)])}<section class="review-result"><h3>Result</h3><dl>${row('NPV', short(r.npv))}${row('Payback', pb(r.payback))}${row('ROI', pct(r.roi))}${row('IRR', pct(r.irr))}${row('Risk-adjusted NPV', short(r.riskAdjustedNPV))}${row('Break-even benefits', r.breakEven.benefits === null ? 'N/A' : Math.round(r.breakEven.benefits * 100) + '% of estimate')}${row('Recommendation', recBadge(r.recommendation))}</dl></section>${warnings.length ? `<ul class="review-warnings">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>` : ''}</div>`;
+  const summaries = {
+      usage: [
+        row('Usage-based cost', p.unitCost && p.volume ? `${unitMoney(p.unitCost)} per unit · ${Math.round(p.volume).toLocaleString('en-US')} ${esc(p.volumeUnit)}/yr` : 'None'),
+        row('Compute budget', money(p.computeBudget) + '/yr'),
+        row('Capacity value', `${money(r.capacity)}/yr ${state.settings.capacity ? '(included)' : '(reported, not in cash)'}`),
+      ],
+      team: [
+        row('Tech team', r.team.planned ? `${r.team.assigned} of ${r.team.needed} needed are free to assign` : 'No team need entered'),
+        row('Full benefit', r.team.stalled ? 'Never: a needed role has nobody free' : 'in ' + months(r.team.monthsToFull)),
+        row('Run support', (p.runNeed || 0) + ' FTE'),
+      ],
+      readiness: [
+        row('Delivery readiness', esc(r.readiness.status)),
+        row('Compliance', esc(r.compliance.status) + (r.compliance.missing.length ? ' · ' + esc(r.compliance.missing.join(', ')) : '')),
+        row('Data · AI risk', `${esc(p.dataSensitivity)} · ${esc(p.aiRisk)}`),
+      ],
+      evidence: [
+        row('KPI', `${esc(p.kpi)}: ${p.before} → ${p.target} ${esc(p.unit)}`),
+        row('Baseline', esc(p.baseline)),
+        row('Health', `${r.health.action} · sponsor ${esc(p.sponsor)}`),
+      ],
+    },
+    details = detailSteps
+      .map(x =>
+        detailAdded(x)
+          ? section(esc(x.title), x.key, summaries[x.key])
+          : `<section class="add-detail"><h3>${esc(x.title)}</h3><p>${esc(x.why)}</p><button type="button" class="btn" data-step="${x.key}">＋ Add</button></section>`,
+      )
+      .join('');
+  return `<div class="wizard-review">${section('The idea', 'idea', [row('Automation', esc(p.name)), row('Owner', `${esc(p.owner)} · ${esc(p.team)}`), row('Stage', `${esc(p.stage)} · ${p.age} months live`)])}${section('Costs', 'costs', [row('Initial capital', money(r.cap)), row('Annual running costs', money(r.op)), row('Year-1 funding request', money(r.fundingRequest))])}${section('Estimated benefits', 'benefits', [row('Direct savings', money(p.direct) + '/yr'), row('Cash share of indirect gains', money((p.indirect * p.indirectCash) / 100) + '/yr'), row('Adoption · ramp · delay', `${p.adoption}% · ${p.ramp} mo · ${p.delay} mo`)])}<section class="review-result"><h3>Result</h3><dl>${row('NPV', short(r.npv))}${row('Payback', pb(r.payback))}${row('ROI', pct(r.roi))}${row('Risk-adjusted NPV', short(r.riskAdjustedNPV))}${row('Probability of success', Math.round(r.success.value) + '%')}${row('Recommendation', recBadge(r.recommendation, r.cautions))}</dl></section><h3 class="review-sub">Add detail (optional)</h3>${details}${warnings.length ? `<ul class="review-warnings">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>` : ''}</div>`;
 }
 function renderWizard() {
-  const s = wizardSteps[wiz.step],
-    last = wiz.step === wizardSteps.length - 1,
+  const s = stepByKey(wiz.step),
+    core = coreSteps.indexOf(s),
+    isReview = s.key === 'review',
     form = $('#add-form');
-  form.innerHTML = `<div class="wizard-top"><div class="eyebrow">NEW INVESTMENT · STEP ${wiz.step + 1} OF ${wizardSteps.length}</div><button type="button" class="close" id="wizard-close" aria-label="Close questionnaire">×</button></div><ol class="wizard-steps">${wizardSteps.map((x, i) => `<li class="${i < wiz.step ? 'done' : i === wiz.step ? 'current' : ''}"><button type="button" data-step="${i}" ${i === wiz.step ? 'aria-current="step"' : ''} ${i > wiz.step ? 'disabled' : ''}>${esc(x.title)}</button></li>`).join('')}</ol><h2 id="wizard-title">${esc(s.title)}</h2><p>${esc(s.intro)}</p>${s.note ? `<p class="detail-note">${esc(s.note)}</p>` : ''}${last ? wizardReview() : `<div class="fields">${s.fields.map(wizardField).join('')}</div><div class="wizard-preview" id="wizard-preview" aria-live="polite">${wizardPreview()}</div>`}<div class="dialog-actions">${wiz.step ? '<button type="button" class="btn" id="wizard-back">← Back</button>' : '<button type="button" class="btn" id="wizard-cancel">Cancel</button>'}<button class="btn primary">${last ? 'Add to portfolio' : 'Next →'}</button></div>`;
+  const bar = coreSteps
+      .map(
+        (x, i) =>
+          `<li class="${core < 0 || i < core ? 'done' : i === core ? 'current' : ''}"><button type="button" data-step="${x.key}" ${i === core ? 'aria-current="step"' : ''} ${i > core && core >= 0 && !wiz.reviewed ? 'disabled' : ''}>${esc(x.title)}</button></li>`,
+      )
+      .join(''),
+    chips = wiz.reviewed
+      ? `<div class="wizard-details"><span>Add detail:</span>${detailSteps.map(x => `<button type="button" class="chip${detailAdded(x) ? ' added' : ''}${x === s ? ' current' : ''}" data-step="${x.key}" ${x === s ? 'aria-current="step"' : ''}>${detailAdded(x) ? '✓' : '＋'} ${esc(x.title)}</button>`).join('')}</div>`
+      : '',
+    eyebrow = s.optional ? 'NEW INVESTMENT · OPTIONAL DETAIL' : `NEW INVESTMENT · STEP ${core + 1} OF ${coreSteps.length}`,
+    back = s.optional
+      ? '<button type="button" class="btn" data-step="review">← Back to review</button>'
+      : core
+        ? '<button type="button" class="btn" id="wizard-back">← Back</button>'
+        : '<button type="button" class="btn" id="wizard-cancel">Cancel</button>',
+    primary = s.optional ? 'Save and return to review' : isReview ? 'Add to portfolio' : 'Next →';
+  form.innerHTML = `<div class="wizard-top"><div class="eyebrow">${eyebrow}</div><button type="button" class="close" id="wizard-close" aria-label="Close questionnaire">×</button></div><ol class="wizard-steps">${bar}</ol>${chips}<h2 id="wizard-title">${esc(s.title)}</h2><p>${esc(s.intro)}</p>${s.note ? `<p class="detail-note">${esc(s.note)}</p>` : ''}${isReview ? wizardReview() : `<div class="fields">${s.fields.map(wizardField).join('')}</div><div class="wizard-preview" id="wizard-preview" aria-live="polite">${wizardPreview()}</div>`}<div class="dialog-actions">${back}<button class="btn primary">${primary}</button></div>`;
   form.querySelectorAll('[name]').forEach(
     i =>
       (i.oninput = () => {
@@ -807,13 +857,14 @@ function renderWizard() {
   form.querySelectorAll('[data-step]').forEach(
     b =>
       (b.onclick = () => {
-        wiz.step = +b.dataset.step;
+        wiz.step = b.dataset.step;
         renderWizard();
+        form.closest('dialog').scrollTop = 0;
       }),
   );
   $('#wizard-back') &&
     ($('#wizard-back').onclick = () => {
-      wiz.step--;
+      wiz.step = coreSteps[core - 1].key;
       renderWizard();
     });
   $('#wizard-cancel') && ($('#wizard-cancel').onclick = () => $('#add-dialog').close());
@@ -821,22 +872,37 @@ function renderWizard() {
   (form.querySelector('[name]') || form.querySelector('.btn.primary')).focus();
 }
 function openWizard() {
-  wiz = { step: 0, draft: { ...wizardBlank } };
+  wiz = { step: 'idea', draft: { ...wizardBlank }, reviewed: false };
   renderWizard();
   $('#add-dialog').showModal();
   $('#add-form [name]').focus();
 }
 $('#add-form').onsubmit = e => {
   e.preventDefault();
-  const form = e.target;
+  const form = e.target,
+    s = stepByKey(wiz.step),
+    go = key => {
+      wiz.step = key;
+      renderWizard();
+      form.closest('dialog').scrollTop = 0;
+    };
   if (!form.checkValidity()) {
     form.reportValidity();
     return;
   }
-  if (wiz.step < wizardSteps.length - 1) {
-    wiz.step++;
-    renderWizard();
-    form.closest('dialog').scrollTop = 0;
+  if (s.optional) return go('review');
+  if (s.key !== 'review') {
+    const next = coreSteps[coreSteps.indexOf(s) + 1];
+    if (next.key === 'review') wiz.reviewed = true;
+    return go(next.key);
+  }
+  // Every required core answer must be present before the project is added.
+  const missing = coreSteps.find(x =>
+    (x.fields || []).some(([k, , , o = {}]) => o.required && String(wiz.draft[k] ?? '').trim() === ''),
+  );
+  if (missing) {
+    go(missing.key);
+    form.reportValidity();
     return;
   }
   const p = { ...wizardProject(wiz.draft), id: crypto.randomUUID() };
