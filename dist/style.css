@@ -933,6 +933,117 @@ dialog input {
 .example b {
   color: var(--ink);
 }
+.method-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #edf1fd;
+  color: var(--blue);
+  font: 700 13px Manrope;
+  display: grid;
+  place-items: center;
+}
+.simple-table {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+}
+.simple-table td {
+  padding: 9px 0;
+  vertical-align: top;
+}
+.simple-table td small {
+  display: block;
+  color: #8b96a6;
+  font-size: 11px;
+}
+.simple-table td:last-child {
+  white-space: normal;
+}
+.simple-table .badge {
+  margin-left: 6px;
+}
+.method p.note {
+  margin: 12px 0 0;
+}
+.simple-short {
+  margin-top: 14px;
+  border: 1px solid #dfe7fb;
+  border-radius: 8px;
+}
+.simple-big {
+  margin: 12px 0 4px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  background: #eef7f3;
+}
+.simple-big.bad {
+  background: #fdf1ee;
+}
+.simple-big small {
+  width: 100%;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #7b8594;
+}
+.simple-big strong {
+  font: 700 26px Manrope;
+  color: var(--green);
+}
+.simple-big.bad strong {
+  color: var(--red);
+}
+.simple-big span {
+  font-size: 12.5px;
+  color: #44516a;
+}
+.simple-aside {
+  margin-top: 26px;
+  padding: 16px 18px;
+  border-left: 3px solid var(--amber);
+  background: #fdf8ef;
+  border-radius: 0 8px 8px 0;
+}
+.simple-aside p {
+  margin: 0;
+}
+.simple-summary {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 8px;
+  background: #1b2535;
+  color: #e7ebf2;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.simple-summary b {
+  color: #fff;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+@media (max-width: 780px) {
+  .method-actions {
+    align-items: stretch;
+  }
+}
 .value-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

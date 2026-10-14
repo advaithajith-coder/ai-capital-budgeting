@@ -294,6 +294,75 @@ const methodSections = [
   ['scope', 'Scope and limitations'],
 ];
 let methodProject = null;
+// Methodology opens on a plain-language walkthrough; the advanced view shows every formula.
+let methodAdvanced = false;
+const methodToggle = () =>
+  `<button type="button" class="btn" id="method-toggle" aria-pressed="${methodAdvanced}">${methodAdvanced ? '← Simple walkthrough' : 'View advanced →'}</button>`;
+const recMeaning = {
+  Validate: 'a promising idea: measure a baseline and plan a pilot',
+  Continue: 'on track: keep going and keep measuring',
+  Scale: 'proven and widely used: roll it out further',
+  Rework: 'it does not pay back as planned: change the plan before spending more',
+  Intervene: 'something needs fixing first: evidence, approvals or health signals',
+};
+function methodSimple(p, r, st, m, picker) {
+  const head = `<div class="method-head"><div><div class="eyebrow">HOW IT WORKS · SIMPLE WALKTHROUGH</div><h2>How an AI investment is judged, step by step.</h2><p class="lead">The whole model in plain language, using live numbers from the project you pick. Every figure is the same one the workspace uses. Open the advanced view for the exact formulas.</p></div><div class="method-actions">${picker.replace('Worked examples use', 'Example project')}${methodToggle()}</div></div>`;
+  if (!p) return `<article class="panel method">${head}</article>`;
+  const yrs = st.years,
+    pc = v => esc(pct(v)),
+    step = (i, title, body) =>
+      `<section class="method-section"><div class="step-dot" aria-hidden="true">${i}</div><div><h3><span class="sr-only">Step ${i}: </span>${title}</h3>${body}</div></section>`,
+    inShort = t => `<div class="example simple-short"><span>In short</span><p>${t}</p></div>`,
+    row = (a, b) => `<tr><td>${a}</td><td>${b}</td></tr>`,
+    indirectCash = (p.indirect * p.indirectCash) / 100,
+    running = r.gross * (p.adoption / 100),
+    full = r.team.monthsToFull,
+    be = r.breakEven,
+    f = r.success.factors;
+  const steps = [
+    step(
+      1,
+      'Add up what it costs',
+      `<p>There are two kinds of cost: a <b>one-time</b> cost to build it and <b>running</b> costs every year. The model also adds two costs that business cases often forget: the company’s own tech team, and a share of the IT platforms several projects use.</p><table class="rule-table simple-table">${row('One-time: build, data preparation and training', `<b>${m(r.cap)}</b>`)}${row('Running: compute, storage, maintenance and human oversight', `<b>${m(r.op)}</b> a year`)}${row(`Internal tech team${st.teamCost === false ? ' (switched off)' : ''}`, `<b>${m(r.team.totalCost / yrs)}</b> a year on average`)}${row(`Share of shared IT costs${st.sharedCost === false ? ' (switched off)' : ''}`, `<b>${m(r.shared.annual)}</b> a year`)}</table>${inShort(`Over ${yrs} years, ${esc(p.name)} costs <b>${m(r.totalCosts)}</b> in total, counting everything.`)}`,
+    ),
+    step(
+      2,
+      'Add up what it saves',
+      `<p>Not every benefit is cash. The model sorts benefits into three types and only counts money the company will actually see.</p><table class="rule-table simple-table">${row(`<b>Direct savings</b><small>Costs reduced or avoided</small>`, `${m(p.direct)} a year ${badge('Counted', 'green')}`)}${row(`<b>Indirect gains</b><small>Quality, retention, fewer complaints</small>`, `${m(p.indirect)} a year ${p.indirectCash >= 100 ? badge('Counted', 'green') : p.indirectCash > 0 ? badge(`${p.indirectCash}% counted`, 'amber') : badge('Not counted', 'red')}`)}${row(`<b>Freed-up time</b><small>${p.hours.toLocaleString('en-US')} hours a year</small>`, `${m(r.capacity)} a year ${st.capacity ? badge('Counted', 'green') : badge('Not counted', 'red')}`)}</table><p class="note"><b>Why freed-up time is not counted by default:</b> saving people time only saves money if a cost goes down or the time is used to earn more. It is shown separately so nobody counts it as cash by mistake.</p>${inShort(`At full strength, the counted benefit is <b>${m(r.gross)}</b> a year (${m(p.direct)} direct${indirectCash ? ` + ${m(indirectCash)} of indirect gains` : ''}${st.capacity ? ` + ${m(r.capacity)} of freed-up time` : ''}${st.benefitFactor !== 100 ? `, adjusted to ${st.benefitFactor}% by the scenario` : ''}).`)}`,
+    ),
+    step(
+      3,
+      'Be realistic about timing',
+      `<p>A new tool does not deliver everything on day one, but its costs start straight away. The model works month by month for ${yrs * 12} months, so slow starts are priced in.</p><table class="rule-table simple-table">${row('<b>Adoption</b><small>Share of people or work that uses it</small>', `<b>${p.adoption}%</b>, so about ${m(running)} a year`)}${row('<b>Full benefit reached</b><small>After delays, ramp-up and staffing</small>', full === Infinity ? '<b>Never</b>: a needed role has nobody assigned' : `<b>${esc(months(full))}</b> after launch`)}${row('<b>Costs start</b>', '<b>Month 1</b>, even during delays')}</table>${inShort(full === Infinity ? 'Until the team gap is filled, this project only has costs.' : `Real savings are about <b>${m(running)}</b> a year once running, not the headline ${m(r.gross)}.`)}`,
+    ),
+    step(
+      4,
+      'Ask “is it worth it?”',
+      `<p>Money in the future is worth less than money today, because the company could invest it elsewhere. So future savings are shrunk by <b>${st.rate}% a year</b> (the hurdle rate) before they are compared with the costs. The result is the <b>NPV</b>, net present value.</p><div class="simple-big ${r.npv > 0 ? 'good' : 'bad'}"><small>NPV over ${yrs} years</small><strong>${m(r.npv)}</strong><span>${r.npv > 0 ? `Positive: it earns more than the ${st.rate}% the company could get elsewhere.` : `Not positive: it does not beat the ${st.rate}% the company could get elsewhere.`}</span></div><table class="rule-table simple-table">${row('<b>Payback</b><small>When the money back covers the money spent</small>', `<b>${esc(pb(r.payback))}</b>`)}${row('<b>IRR</b><small>Its yearly return, like an interest rate</small>', `<b>${pc(r.irr)}</b>`)}${row('<b>ROI</b><small>Profit per $1 spent over the horizon</small>', `<b>${pc(r.roi)}</b>`)}</table>`,
+    ),
+    step(
+      5,
+      'Ask “how sure are we?”',
+      `<p>Projects can fail. The chance of success starts from the project’s stage and drops for each warning sign: delivery risks, missing approvals or a weak sponsor.</p><table class="rule-table simple-table">${row(`Starting point: <b>${esc(p.stage)}</b> stage`, `<b>${r.success.base}%</b>`)}${f.map(x => row(esc(x.name), `× ${x.factor}`)).join('') || row('No warning signs', '× 1')}${row('<b>Chance of success</b>', `<b>${Math.round(r.success.value)}%</b>${r.success.overridden ? ' (set by hand, with a reason)' : ''}`)}</table><p>Then the good and bad outcomes are weighed: ${Math.round(r.probability * 100)}% chance of gaining ${m(r.npv)}, against a ${Math.round((1 - r.probability) * 100)}% chance of losing the ${m(r.failureLoss)} spent before it is fully running.</p>${inShort(`Risk-adjusted NPV is <b>${m(r.riskAdjustedNPV)}</b>: ${r.riskAdjustedNPV > 0 ? 'still worth doing after allowing for failure.' : 'not worth it once the chance of failure is priced in.'}`)}`,
+    ),
+    step(
+      6,
+      'Ask “how much can go wrong?”',
+      `<p>Break-even shows how much room for error there is, changing one thing at a time.</p><table class="rule-table simple-table">${row('<b>Savings</b>', be.benefits === null ? 'N/A' : be.benefits <= 1 ? `could be <b>${pc(1 - be.benefits)} lower</b> and still break even` : `must be <b>${pc(be.benefits - 1)} higher</b> than estimated to break even`)}${row('<b>Costs</b>', be.costHeadroom === null ? 'N/A' : be.costHeadroom >= 0 ? `could rise <b>${pc(be.costHeadroom)}</b> and still break even` : `must fall <b>${pc(-be.costHeadroom)}</b> to break even`)}${row('<b>Adoption</b>', be.adoption === null ? 'N/A' : be.adoption > 100 ? 'cannot break even through adoption alone' : `must reach at least <b>${Math.round(be.adoption)}%</b> (now ${p.adoption}%)`)}</table>${inShort(be.benefits === null || be.benefits > 1 ? 'There is no margin yet: the estimates must improve before this project breaks even.' : be.benefits > 0.85 ? 'The margin is thin. Check the estimates closely before approval.' : 'There is a comfortable margin, so the case survives estimates that turn out too optimistic.')}`,
+    ),
+    step(
+      7,
+      'Check the real results',
+      `<p>Forecasts are guesses. Once a project is live, the model compares them with what is actually happening.</p><table class="rule-table simple-table">${row(`<b>Measured result</b><small>${esc(p.kpi)}</small>`, `<b>${evidenceText(r)}</b>`)}${row('<b>Health signals</b><small>Usage, accuracy, sponsor, budget, staffing</small>', `<b>${esc(r.health.action)}</b>`)}${row('<b>Recommendation</b>', recBadge(r.recommendation, r.cautions))}</table>${inShort(`<b>${esc(r.recommendation)}</b> means ${recMeaning[r.recommendation] || 'see the project detail'}. The rules support human judgment; they do not make the funding decision.`)}`,
+    ),
+  ].join('');
+  const refOK = p.direct + r.capacity - operating(p) > 0;
+  return `<article class="panel method">${head}${steps}${
+    refOK
+      ? `<aside class="simple-aside"><h4>Why a quick formula gives a different answer</h4><p>The reference document’s shortcut gives ${esc(p.name)} a payback of <b>${esc(pb(r.referencePayback))}</b>. This model says <b>${esc(pb(r.payback))}</b>. The shortcut assumes full use from day one and leaves out ramp-up, the internal team and shared IT costs. The month-by-month figure is the one to trust.</p></aside>`
+      : ''
+  }<div class="simple-summary"><b>The whole method in one line:</b> count every cost, count only real cash savings, allow for timing, shrink future money to today’s value, then allow for the chance of failure. If it is still positive, fund it, and keep checking that it delivers.</div></article>`;
+}
 function method() {
   const st = state.settings,
     p = state.projects.find(x => x.id === methodProject) || state.projects[0];
@@ -312,6 +381,7 @@ function method() {
         .map(x => `<option value="${esc(x.id)}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`)
         .join('')}</select></label>`
     : '<p class="lead">Add a project to see worked examples.</p>';
+  if (!methodAdvanced) return methodSimple(p, r, st, m, picker);
   const body = [
     sec(
       'value',
@@ -565,7 +635,7 @@ ${formula(
   ].join('');
   return `<div class="method-wrap"><nav class="method-toc" aria-label="Methodology sections"><div class="eyebrow">ON THIS PAGE</div>${methodSections
     .map(([id, t], i) => `<a href="#m-${id}" data-method-jump="${id}"><span>${String(i + 1).padStart(2, '0')}</span>${t}</a>`)
-    .join('')}</nav><article class="panel method"><div class="method-head"><div><div class="eyebrow">MODEL TRANSPARENCY</div><h2>Built for a business case you can defend.</h2><p class="lead">Every figure in the workspace comes from the formulas below. Values in the worked examples are live: they use the current scenario, settings and the project you pick.</p></div>${picker}</div>${body}</article></div>`;
+    .join('')}</nav><article class="panel method"><div class="method-head"><div><div class="eyebrow">MODEL TRANSPARENCY</div><h2>Built for a business case you can defend.</h2><p class="lead">Every figure in the workspace comes from the formulas below. Values in the worked examples are live: they use the current scenario, settings and the project you pick.</p></div><div class="method-actions">${picker}${methodToggle()}</div></div>${body}</article></div>`;
 }
 // Shared tech team: thin wrappers over portfolio.js using the current state.
 const roleUsage = () => usageOf(state.projects, state.settings.team);
@@ -720,6 +790,11 @@ function sharedIt() {
     .join('')}</tbody></table></div><div class="table-foot"><span>Bases use inputs only: compute spend, people assigned, stage and data sensitivity. Moving people on the Tech team page changes the data-platform and licence split.</span><span>Annual cost × cost multiplier, charged monthly from month 1.</span></div></div>`;
 }
 function bindView() {
+  $('#method-toggle')?.addEventListener('click', () => {
+    methodAdvanced = !methodAdvanced;
+    render();
+    $('#method-toggle').focus();
+  });
   $('#method-project')?.addEventListener('change', e => {
     methodProject = e.target.value;
     render();
