@@ -1,101 +1,24 @@
+import { calculate, operating } from './model.js';
+import { esc, money, short, axisMoney, niceTicks, pct, duration, pb, irrShort, unitMoney, months } from './format.js';
 import {
-  defaults,
-  projectDefaults,
-  examples,
-  calculate,
-  health,
-  setup,
-  operating,
-  irr,
-  breakEven,
-} from './model.js';
-const $ = q => document.querySelector(q),
-  esc = v =>
-    String(v).replace(
-      /[&<>"']/g,
-      c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
-const money = v =>
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-      notation: Math.abs(v) >= 1000000 ? 'compact' : 'standard',
-    }).format(v),
-  short = v => {
-    const sign = v < 0 && Math.round(Math.abs(v) / 1000) > 0 ? '−' : '',
-      a = Math.abs(v);
-    return sign + (a >= 1000000 ? '$' + (a / 1000000).toFixed(2) + 'M' : '$' + Math.round(a / 1000) + 'K');
-  },
-  // Axis labels drop trailing zeros: $2M, $2.5M, −$500K.
-  axisMoney = v => {
-    const a = Math.abs(v),
-      sign = v < 0 ? '−' : '';
-    if (!a) return '$0';
-    return sign + (a >= 1000000 ? '$' + +(a / 1000000).toFixed(2) + 'M' : '$' + Math.round(a / 1000) + 'K');
-  },
-  // Four to six evenly spaced round values covering [lo, hi].
-  niceTicks = (lo, hi) => {
-    const rough = (hi - lo) / 4,
-      mag = Math.pow(10, Math.floor(Math.log10(rough))),
-      step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= rough),
-      ticks = [];
-    for (let v = Math.floor(lo / step) * step; v <= Math.ceil(hi / step) * step + step / 2; v += step)
-      ticks.push(Math.round(v / step) * step);
-    return ticks;
-  },
-  pct = v => (v === null ? 'N/A' : (v * 100).toFixed(1) + '%'),
-  // Payback reads in months under two years, otherwise in years with months alongside.
-  duration = v => (v < 24 ? v.toFixed(1) + ' mo' : (v / 12).toFixed(1) + ' yrs (' + Math.round(v) + ' mo)'),
-  pb = v => (v === null ? 'Beyond horizon' : duration(v)),
-  irrShort = v => (v !== null && v > 1 ? '>100%' : pct(v));
-const unitMoney = v =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: Math.abs(v) < 1 ? 3 : 2,
-  }).format(v);
+  scenarioPresets,
+  freshState,
+  migrateSaved,
+  results as projectResults,
+  aggregate,
+  roleUsage as usageOf,
+  moveTeam as move,
+} from './portfolio.js';
+import { wizardBlank, wizardSteps, buildProject } from './wizard.js';
+const $ = q => document.querySelector(q);
 const colors = ['#4265df', '#48a88d', '#9b81d9', '#dda556', '#688ca8'],
   icons = ['◉', '✧', '▤', '⌁', '⚙'];
-let state = {
-    projects: structuredClone(examples),
-    settings: structuredClone(defaults),
-    excluded: [],
-    view: 'overview',
-    scenario: 'base',
-  },
+let state = freshState(),
   storageOK = true,
   selected = null,
   query = '';
 try {
-  const saved = JSON.parse(localStorage.getItem('ai-capital-v1'));
-  if (saved && Array.isArray(saved.projects) && saved.settings && typeof saved.settings === 'object') {
-    saved.projects = saved.projects.map(p => ({
-      ...structuredClone(projectDefaults),
-      ...(examples.find(e => e.id === p?.id) || {}),
-      ...p,
-    }));
-    saved.settings = { ...structuredClone(defaults), ...saved.settings };
-  }
-  if (
-    saved &&
-    Array.isArray(saved.projects) &&
-    saved.projects.every(
-      p =>
-        typeof p.id === 'string' &&
-        typeof p.name === 'string' &&
-        Object.keys(examples[0]).every(k => typeof p[k] === typeof examples[0][k]),
-    ) &&
-    saved.settings &&
-    Object.keys(defaults).every(k => typeof saved.settings[k] === typeof defaults[k]) &&
-    [2, 3, 5, 10].includes(saved.settings.years) &&
-    saved.settings.rate >= 0 &&
-    saved.settings.rate <= 80
-  ) {
-    state = { ...state, ...saved };
-    state.view = 'overview';
-  }
+  state = migrateSaved(JSON.parse(localStorage.getItem('ai-capital-v1'))) || state;
 } catch {
   storageOK = false;
 }
@@ -112,47 +35,12 @@ function toast(t) {
   $('#toast').style.display = 'block';
   setTimeout(() => ($('#toast').style.display = 'none'), 2600);
 }
-function results(s = state.settings) {
-  return state.projects.map((p, i) => ({ p, i, r: calculate(p, s) }));
-}
-function portfolio(s = state.settings) {
-  const all = results(s).filter(x => !state.excluded.includes(x.p.id));
-  const flows = Array(s.years * 12 + 1).fill(0);
-  all.forEach(x => x.r.flows.forEach((v, i) => (flows[i] += v)));
-  let c = flows[0],
-    payback = null;
-  for (let m = 1; m < flows.length; m++) {
-    if (payback === null && c < 0 && c + flows[m] >= 0) payback = m - 1 - c / flows[m];
-    c += flows[m];
-  }
-  const sum = k => all.reduce((v, x) => v + x.r[k], 0);
-  return {
-    all,
-    rnpv: sum('riskAdjustedNPV'),
-    funding: sum('fundingRequest'),
-    breakEven: breakEven({
-      cap: sum('cap'),
-      pvBenefits: sum('pvBenefits'),
-      pvFixed: sum('pvFixed'),
-      pvVariable: sum('pvVariable'),
-    }),
-    yearly: Array.from({ length: s.years }, (_, y) => ({
-      year: y + 1,
-      benefit: all.reduce((v, x) => v + x.r.yearly[y].benefit, 0),
-      cost: all.reduce((v, x) => v + x.r.yearly[y].cost, 0),
-    })),
-    npv: all.reduce((v, x) => v + x.r.npv, 0),
-    cap: all.reduce((v, x) => v + x.r.cap, 0),
-    benefit: all.reduce((v, x) => v + x.r.totalBenefits, 0),
-    cost: all.reduce((v, x) => v + x.r.totalCosts, 0),
-    irr: irr(flows),
-    payback,
-    flows,
-  };
-}
+const results = (s = state.settings) => projectResults(state.projects, s);
+const portfolio = (s = state.settings) => aggregate(state.projects, state.excluded, s);
 const badge = (value, cls) => `<span class="badge ${cls}">${esc(value)}</span>`;
-const recBadge = v =>
-  badge(v, v === 'Scale' ? 'green' : v === 'Continue' ? 'blue' : v === 'Intervene' ? 'amber' : 'red');
+const recBadge = (v, cautions = []) =>
+  badge(v, v === 'Scale' ? 'green' : v === 'Continue' || v === 'Validate' ? 'blue' : v === 'Intervene' ? 'amber' : 'red') +
+  (cautions.length ? `<span class="caution" title="${esc(cautions.join(' · '))}" aria-label="${esc(cautions.join('. '))}">⚠</span>` : '');
 function metrics(a = portfolio(), label = 'Portfolio') {
   if (a.all && !a.all.length)
     return `<div class="metrics">${['NPV', 'payback', 'ROI']
@@ -205,7 +93,7 @@ function allocationChart() {
 }
 function table() {
   const all = results().filter(x => `${x.p.name} ${x.p.team}`.toLowerCase().includes(query.toLowerCase()));
-  return `<div class="panel table-panel"><div class="table-head"><div><h2>Investment portfolio <span class="pill">${state.projects.length} automations</span></h2><p>Compare returns. Open an automation to change its business case.</p></div><input id="search" aria-label="Search automations" placeholder="⌕  Search automations" value="${esc(query)}"></div><div class="table-wrap"><table><thead><tr><th>INCLUDE / AUTOMATION</th><th>STAGE</th><th>INITIAL CAPITAL</th><th>NPV</th><th>PAYBACK</th><th>ROI</th><th>IRR</th><th>EVIDENCE</th><th>DECISION</th></tr></thead><tbody>${all.map(({ p, i, r }) => `<tr><td><div class="project-cell"><input type="checkbox" data-include="${esc(p.id)}" aria-label="Include ${esc(p.name)} in portfolio" ${state.excluded.includes(p.id) ? '' : 'checked'}><span class="project-icon" style="background:${colors[i % 5]}13;color:${colors[i % 5]}">${icons[i % 5]}</span><button class="name-button" data-project="${esc(p.id)}"><strong>${esc(p.name)}</strong><small>${esc(p.team)} · ${esc(p.owner)}</small></button></div></td><td>${badge(p.stage, p.stage === 'Production' ? 'green' : 'blue')}</td><td>${short(r.cap)}</td><td><strong style="color:${r.npv > 0 ? 'var(--green)' : 'var(--red)'}">${short(r.npv)}</strong><small class="sub" title="Probability of success ${+r.success.value.toFixed(1)}%">Risk-adj. ${short(r.riskAdjustedNPV)} · ${Math.round(r.success.value)}%</small></td><td>${pb(r.payback)}</td><td>${pct(r.roi)}</td><td title="Annualized IRR: ${pct(r.irr)}">${irrShort(r.irr)}</td><td>${badge(p.baseline, p.baseline === 'Verified' ? 'green' : 'amber')}</td><td>${recBadge(r.recommendation)}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">No automations match your search.</td></tr>'}</tbody></table></div><div class="table-foot"><span>${portfolio().all.length} included in portfolio · ${state.settings.capacity ? 'Cash + capacity value' : 'Cash benefit case'} · Portfolio IRR ${pct(portfolio().irr)}</span><span>Live calculations · Click a project to inspect assumptions →</span></div></div>`;
+  return `<div class="panel table-panel"><div class="table-head"><div><h2>Investment portfolio <span class="pill">${state.projects.length} automations</span></h2><p>Compare returns. Open an automation to change its business case.</p></div><input id="search" aria-label="Search automations" placeholder="⌕  Search automations" value="${esc(query)}"></div><div class="table-wrap"><table><thead><tr><th>INCLUDE / AUTOMATION</th><th>STAGE</th><th>INITIAL CAPITAL</th><th>NPV</th><th>PAYBACK</th><th>ROI</th><th>IRR</th><th>EVIDENCE</th><th>DECISION</th></tr></thead><tbody>${all.map(({ p, i, r }) => `<tr><td><div class="project-cell"><input type="checkbox" data-include="${esc(p.id)}" aria-label="Include ${esc(p.name)} in portfolio" ${state.excluded.includes(p.id) ? '' : 'checked'}><span class="project-icon" style="background:${colors[i % 5]}13;color:${colors[i % 5]}">${icons[i % 5]}</span><button class="name-button" data-project="${esc(p.id)}"><strong>${esc(p.name)}</strong><small>${esc(p.team)} · ${esc(p.owner)}</small></button></div></td><td>${badge(p.stage, p.stage === 'Production' ? 'green' : 'blue')}</td><td>${short(r.cap)}</td><td><strong style="color:${r.npv > 0 ? 'var(--green)' : 'var(--red)'}">${short(r.npv)}</strong><small class="sub" title="Probability of success ${+r.success.value.toFixed(1)}%">Risk-adj. ${short(r.riskAdjustedNPV)} · ${Math.round(r.success.value)}%</small></td><td>${pb(r.payback)}</td><td>${pct(r.roi)}</td><td title="Annualized IRR: ${pct(r.irr)}">${irrShort(r.irr)}</td><td>${badge(p.baseline, p.baseline === 'Verified' ? 'green' : 'amber')}</td><td>${recBadge(r.recommendation, r.cautions)}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">No automations match your search.</td></tr>'}</tbody></table></div><div class="table-foot"><span>${portfolio().all.length} included in portfolio · ${state.settings.capacity ? 'Cash + capacity value' : 'Cash benefit case'} · Portfolio IRR ${pct(portfolio().irr)}</span><span>Live calculations · Click a project to inspect assumptions →</span></div></div>`;
 }
 function fundingPlan() {
   const a = portfolio(),
@@ -238,11 +126,6 @@ function overview() {
     `<div class="insight"><b>✧</b><p><strong>Decision brief.</strong> ${best ? `${esc(best.p.name)} has the highest modeled NPV at ${short(best.r.npv)}.` : 'Select an automation to form a portfolio.'} ${risk.length} initiative${risk.length === 1 ? ' needs' : 's need'} evidence or health intervention before additional capital is committed. Recommendations are rule based and require executive review.</p></div>`
   );
 }
-const scenarioPresets = {
-  base: { benefitFactor: 100, costFactor: 100, delay: 0 },
-  downside: { benefitFactor: 75, costFactor: 120, delay: 3 },
-  upside: { benefitFactor: 120, costFactor: 95, delay: 0 },
-};
 function scope() {
   const p = state.projects.find(x => x.id === state.scenarioScope);
   if (!p) {
@@ -373,39 +256,23 @@ function evidence() {
   return `<div class="insight" style="margin:0 0 22px"><b>▤</b><p><strong>Evidence before confidence.</strong> All five projects are examples. “Verified” describes the example's baseline quality, not a verification performed by this tool. Monetary figures remain forecasts; operational observations do not establish attributable cash savings.</p></div>${included.length ? `<div class="metrics"><div class="metric"><div class="metric-top">Forecast NPV</div><strong>${short(forecast)}</strong><small>Included projects, estimated benefits</small></div><div class="metric"><div class="metric-top">Evidence-adjusted NPV</div><strong>${short(adjusted)}</strong><small>Benefits scaled to measured KPI progress</small></div><div class="metric"><div class="metric-top">Gap</div><strong>${short(adjusted - forecast)}</strong><small>Value not yet backed by results</small></div><div class="metric"><div class="metric-top">With measured results</div><strong>${measured.length} of ${included.length}</strong><small>Others use the forecast</small></div></div>` : ''}<div class="health-grid">${results()
     .map(
       ({ p, r }) =>
-        `<article class="panel"><div class="panel-head"><div><h2><button class="name-button" data-project="${esc(p.id)}">${esc(p.name)} ↗</button></h2><p>${esc(p.owner)} · ${p.age} months since launch</p></div>${badge(r.health.action, r.health.action === 'Healthy' ? 'green' : r.health.action === 'Escalate' ? 'red' : 'amber')}</div><div class="health-row"><span>${esc(p.kpi)}</span><b>${p.baseline === 'Missing' ? 'Unmeasured' : p.before + ' ' + esc(p.unit)} → ${p.after} ${esc(p.unit)}</b></div><div class="health-row"><span>Baseline quality</span>${badge(p.baseline, p.baseline === 'Verified' ? 'green' : 'amber')}</div>${r.health.signals.map(s => `<div class="health-row"><span>${s.name}</span>${badge(s.value, s.level === 2 ? 'red' : s.level === 1 ? 'amber' : 'green')}</div>`).join('')}<div class="health-row"><span>Probability of success</span><b title="${probabilityText(r.success)}">${Math.round(r.success.value)}%${r.success.overridden ? ' · override' : ''}${r.success.unassessed.length ? ` · ${r.success.unassessed.length} not assessed` : ''}</b></div><div class="health-row"><span>Delivery readiness</span><span title="${esc(r.readiness.items.map(i => i.name + ': ' + i.value).join(' · '))}">${badge(r.readiness.status, r.readiness.status === 'Ready' ? 'green' : r.readiness.status === 'Not ready' ? 'red' : 'amber')}</span></div><div class="health-row"><span>Compliance</span>${badge(r.compliance.status === 'Cleared' ? 'Cleared' : r.compliance.status + ': ' + r.compliance.missing.join(', '), r.compliance.status === 'Cleared' ? 'green' : r.compliance.status === 'Blocked' ? 'red' : 'amber')}</div><div class="health-row"><span>Running cost per unit</span><b>${r.unit ? unitMoney(r.unit.cost) + ' · ' + esc(p.volumeUnit) : 'Volume not set'}</b></div><div class="health-row"><span>KPI progress</span><b>${evidenceText(r)}</b></div><div class="health-row"><span>Evidence-adjusted NPV</span><b>${r.evidence.applicable ? `${short(r.evidence.npv)} <small class="muted">vs ${short(r.npv)} forecast</small>` : 'Uses forecast'}</b></div><div class="health-row"><span>Compute overrun cost (${state.settings.years} yrs, PV)</span><b>${r.compute.overrun === null ? 'No budget' : r.compute.pvCost > 0 ? short(r.compute.pvCost) : 'Within budget'}</b></div><p class="evidence">${esc(p.evidence)}</p><p class="evidence"><strong>Next decision: ${r.recommendation}.</strong> ${r.compliance.status === 'Blocked' ? `Complete the ${esc(r.compliance.missing.join(', ').toLowerCase())} before further rollout. ` : ''}${r.readiness.status === 'Not ready' ? 'Resolve high delivery risks before committing more capital. ' : ''}${p.baseline !== 'Verified' ? 'Reconstruct a comparable baseline and validate value attribution. ' : ''}${r.health.action !== 'Healthy' ? 'Resolve flagged signals before expansion. ' : 'Validate sustained results and operating costs at the next monthly review. '}Reassess if NPV falls below zero or health deteriorates.</p></article>`,
+        `<article class="panel"><div class="panel-head"><div><h2><button class="name-button" data-project="${esc(p.id)}">${esc(p.name)} ↗</button></h2><p>${esc(p.owner)} · ${p.age} months since launch</p></div>${badge(r.health.action, r.health.action === 'Healthy' ? 'green' : r.health.action === 'Escalate' ? 'red' : 'amber')}</div><div class="health-row"><span>${esc(p.kpi)}</span><b>${p.baseline === 'Missing' ? 'Unmeasured' : p.before + ' ' + esc(p.unit)} → ${p.after} ${esc(p.unit)}</b></div><div class="health-row"><span>Baseline quality</span>${badge(p.baseline, p.baseline === 'Verified' ? 'green' : 'amber')}</div>${r.health.signals.map(s => `<div class="health-row"><span>${s.name}</span>${badge(s.value, s.level === 2 ? 'red' : s.level === 1 ? 'amber' : 'green')}</div>`).join('')}<div class="health-row"><span>Probability of success</span><b title="${probabilityText(r.success)}">${Math.round(r.success.value)}%${r.success.overridden ? ' · override' : ''}${r.success.unassessed.length ? ` · ${r.success.unassessed.length} not assessed` : ''}</b></div><div class="health-row"><span>Delivery readiness</span><span title="${esc(r.readiness.items.map(i => i.name + ': ' + i.value).join(' · '))}">${badge(r.readiness.status, r.readiness.status === 'Ready' ? 'green' : r.readiness.status === 'Not ready' ? 'red' : 'amber')}</span></div><div class="health-row"><span>Compliance</span>${badge(r.compliance.status === 'Cleared' ? 'Cleared' : r.compliance.status + ': ' + r.compliance.missing.join(', '), r.compliance.status === 'Cleared' ? 'green' : r.compliance.status === 'Blocked' ? 'red' : 'amber')}</div><div class="health-row"><span>Running cost per unit</span><b>${r.unit ? unitMoney(r.unit.cost) + ' · ' + esc(p.volumeUnit) : 'Volume not set'}</b></div><div class="health-row"><span>KPI progress</span><b>${evidenceText(r)}</b></div><div class="health-row"><span>Evidence-adjusted NPV</span><b>${r.evidence.applicable ? `${short(r.evidence.npv)} <small class="muted">vs ${short(r.npv)} forecast</small>` : 'Uses forecast'}</b></div><div class="health-row"><span>Compute overrun cost (${state.settings.years} yrs, PV)</span><b>${r.compute.overrun === null ? 'No budget' : r.compute.pvCost > 0 ? short(r.compute.pvCost) : 'Within budget'}</b></div><p class="evidence">${esc(p.evidence)}</p><p class="evidence"><strong>Next decision: ${r.recommendation}.</strong> ${r.cautions.map(c => esc(c) + '. ').join('')} ${r.compliance.status === 'Blocked' ? `Complete the ${esc(r.compliance.missing.join(', ').toLowerCase())} before further rollout. ` : ''}${r.readiness.status === 'Not ready' ? 'Resolve high delivery risks before committing more capital. ' : ''}${p.baseline !== 'Verified' ? 'Reconstruct a comparable baseline and validate value attribution. ' : ''}${r.health.action !== 'Healthy' ? 'Resolve flagged signals before expansion. ' : 'Validate sustained results and operating costs at the next monthly review. '}Reassess if NPV falls below zero or health deteriorates.</p></article>`,
     )
     .join('')}</div>`;
 }
 function method() {
-  return `<article class="panel method"><div class="eyebrow">MODEL TRANSPARENCY</div><h2>Built for a business case you can defend.</h2><p>The supplied “Measure and demonstrate AI business value” document informs the four-part value framework, stakeholder metrics, baseline evidence, and early warning indicators. Its learning exercises are reference content, not instructions to this application.</p><h3>Four parts of AI value</h3><ul><li><b>Direct savings:</b> expenses reduced or avoided. Do not also count the same labor as recovered capacity.</li><li><b>Indirect gains:</b> retention, quality, revenue, or reduced complaints. Only the explicitly cash-qualified share enters the financial case.</li><li><b>Productivity:</b> hours recovered × loaded hourly rate × realization. Reported separately; included only when the capacity option is enabled.</li><li><b>Full costs:</b> build, data preparation, training, inference compute, storage, maintenance, and human oversight. Include integration and governance spend in the relevant cost fields.</li></ul><h3>Monthly cash flow model</h3><p>Implementation, data preparation, and training are paid at month zero. Operating costs begin in month one, including during rollout delays. Benefits begin after the project delay plus scenario delay and ramp linearly to full production over the entered ramp months. Benefits are multiplied by adoption and the scenario benefit factor. Yearly benefit and cost growth apply at each twelve-month boundary.</p><h3>Capital budgeting conventions</h3><p><b>NPV:</b> − initial capital + Σ monthly net benefit ÷ (1 + annual discount rate)<sup>month/12</sup>. <b>IRR:</b> the monthly rate that makes NPV zero, annualized as (1 + monthly IRR)<sup>12</sup> − 1. N/A means no unique conventional IRR, no positive inflow, or no root within the search bounds. <b>Payback:</b> first monthly cumulative cash crossing, with linear interpolation. Discounted payback uses discounted monthly flows. Returns beyond the horizon are shown explicitly.</p><p><b>ROI (total cost basis):</b> (horizon benefits − horizon costs) ÷ horizon costs. <b>Capital ROI:</b> the same net benefit ÷ initial capital. ROI on total cost basis is a headline portfolio and project metric; capital ROI appears in each project's cash-flow view. IRR above 100% is summarized as “>100%” in the portfolio table because small initial capital makes it unstable for ranking; the exact value is in project detail and on hover. The reference's capital deployed convention includes first-year operating costs; the tool labels its initial capital basis separately.</p><h3>Funding, risk and break-even</h3><p><b>Year-1 funding request:</b> initial capital + the first twelve months of scheduled running costs. It is a budgeting figure; it does not change NPV, IRR or payback, which keep one-time costs at month 0 and running costs in the month they occur. <b>Total cost of ownership:</b> initial capital + all running costs over the horizon, undiscounted. <b>Risk-adjusted NPV:</b> probability of success × NPV − (1 − probability) × initial capital. Each project's probability starts from its stage (defaults: Idea 30%, Pilot 60%, Production 90%) and is multiplied by 0.80 for each high delivery risk, 0.90 for each medium risk and, for pilots and production projects, 0.85 for each missing required approval, with a 5% floor; all are editable in the Scenario lab. Not assessed ratings are neutral (× 1) and flagged. A limited sponsor multiplies by 0.90 and a missing sponsor by 0.75. Staffing is deliberately excluded because it already changes cash flows; it does set the Team capacity rating (below 50% staffed High, below 100% Medium, otherwise Low) when a team need is entered. A per-project override applies only with a written reason, and the rule-based value stays visible. This simplification assumes a failed project loses its initial capital and stops. <b>Break-even:</b> NPV is linear in each driver, so the tool solves it directly. Estimated benefits must reach (initial capital + PV of all running costs) ÷ PV of benefits. Costs can rise by PV of benefits ÷ (initial capital + PV of costs) − 1. Adoption must reach current adoption × (initial capital + PV of fixed costs) ÷ (PV of benefits − PV of usage costs). Each holds every other assumption fixed.</p><h3>Unit economics</h3><p>Usage-based cost = cost per unit × annual volume × adoption × ramp × benefit growth, so it starts with usage and is never charged during a rollout delay. Fixed running costs are unchanged. Steady-state cost per unit = (fixed running costs + usage cost) ÷ (volume × adoption); benefit per unit uses the cash benefit case. The example projects keep their reference compute costs as fixed costs, and their volumes are illustrative.</p><h3>Readiness and compliance</h3><p>Data readiness, integration, vendor dependency and team capacity are rated low, medium or high risk. Two or more high risks → Not ready; one high or two or more medium → At risk; anything unassessed → Incomplete; otherwise Ready. Readiness informs the decision but does not change the recommendation. Security review is always required, legal & privacy review is required for personal data, and model risk review for high-risk AI. A pilot or production project missing a required approval is Blocked and recommended for intervention; an idea is Pending.</p><h3>Reference payback is shown separately</h3><p>The reference uses (implementation + first-year operating costs) ÷ (annual direct savings + productivity − annual operating costs), excluding indirect gains. This simplified ratio is available in project detail. It ignores actual ramp and adoption and counts first-year operating costs in the numerator as well as the annual net benefit denominator. Our primary payback uses the monthly cash schedule. The reference also contains conflicting example payback summaries, so they are not copied as validated outputs.</p><h3>Health signals and decision rules</h3><p>Reference adoption alerts: below 40% after three months → monitor; below 20% after six months → red flag requiring a recovery plan review. Two yellow signals → investigate; two red → escalate. Application policy additionally investigates any single red. Pipeline thresholds (98% watch, below 95% red) are configurable product assumptions represented here as fixed demo policy. Accuracy is yellow when below its project target and flat or declining. Missing sponsor is red; limited engagement is yellow.</p><p>Intervene when evidence is incomplete, required approvals are missing, or health requires investigation/escalation; otherwise rework when NPV ≤ 0, scale a production investment with ≥ 80% adoption and positive NPV, or continue. These deterministic recommendations support human judgment. They are not autonomous funding decisions.</p><h3>Evidence and compute links</h3><p><b>KPI progress</b> = improvement achieved ÷ improvement targeted, from the baseline to the latest observed value, capped at 100% and floored at 0%. It needs a launched project, a baseline that is not missing, and a target that improves on the baseline; a partial baseline is marked provisional. <b>Evidence-adjusted NPV</b> = NPV − (1 − progress) × PV of estimated benefits, i.e. benefits scaled to measured progress. It assumes cash benefit moves in proportion to the KPI, is shown beside the forecast and never replaces it. <b>Compute vs budget</b> adds a health signal (more than 10% over yellow, more than 25% red) and reports the present value of the overrun over the horizon, the NPV that would be recovered by returning to budget.</p><h3>Shared tech team</h3><p>The tech team is a shared pool by role (default 25 people: 8 ML engineers, 7 data engineers, 6 software engineers, 4 MLOps & platform), each with an editable loaded annual cost. Every project states the people it needs by role to build and the full-time equivalents needed to run it. <b>Coverage</b> is assigned ÷ needed for the most short-staffed role. Time to full benefit (project delay and ramp; scenario delay is unchanged) is multiplied by 1 ÷ coverage when short, by 1 ÷ √coverage when every role is over-staffed (never less than half), and becomes never when a needed role has nobody. <b>Team cost</b> is charged monthly: the full assigned team until benefits reach full ramp, then the run-support share (run FTE ÷ assigned, capped at all assigned). It counts as a fixed running cost, so it flows into NPV, payback, Year-1 funding, break-even and unit economics. Example cost fields are treated as external and vendor costs, so internal people are not counted twice. Bench people and people left assigned after a build are not charged to projects; the Tech team page reports them separately so the whole team cost is visible. The charge can be switched off to compare; staffing delays still apply. Health adds a team staffing signal: build coverage, or run coverage once in production (below 50% red, below 100% yellow).</p><h3>Scope and limitations</h3><p>USD, nominal, before-tax estimates. No depreciation tax shield, working capital, terminal value, financing, shared infrastructure savings, project dependencies, or budget optimization. Portfolio totals assume additive, independent benefits and costs; check overlap before approval. Data is saved only in this browser. There is no company login, shared database, or live telemetry connection. Export captures assumptions and monthly results for review.</p></article>`;
+  return `<article class="panel method"><div class="eyebrow">MODEL TRANSPARENCY</div><h2>Built for a business case you can defend.</h2><p>The supplied “Measure and demonstrate AI business value” document informs the four-part value framework, stakeholder metrics, baseline evidence, and early warning indicators. Its learning exercises are reference content, not instructions to this application.</p><h3>Four parts of AI value</h3><ul><li><b>Direct savings:</b> expenses reduced or avoided. Do not also count the same labor as recovered capacity.</li><li><b>Indirect gains:</b> retention, quality, revenue, or reduced complaints. Only the explicitly cash-qualified share enters the financial case.</li><li><b>Productivity:</b> hours recovered × loaded hourly rate × realization. Reported separately; included only when the capacity option is enabled.</li><li><b>Full costs:</b> build, data preparation, training, inference compute, storage, maintenance, and human oversight. Include integration and governance spend in the relevant cost fields.</li></ul><h3>Monthly cash flow model</h3><p>Implementation, data preparation, and training are paid at month zero. Operating costs begin in month one, including during rollout delays. Benefits begin after the project delay plus scenario delay and ramp linearly to full production over the entered ramp months. Benefits are multiplied by adoption and the scenario benefit factor. Yearly benefit and cost growth apply at each twelve-month boundary.</p><h3>Capital budgeting conventions</h3><p><b>NPV:</b> − initial capital + Σ monthly net benefit ÷ (1 + annual discount rate)<sup>month/12</sup>. <b>IRR:</b> the monthly rate that makes NPV zero, annualized as (1 + monthly IRR)<sup>12</sup> − 1. N/A means no unique conventional IRR, no positive inflow, or no root within the search bounds. <b>Payback:</b> the month cumulative cash is finally recovered, with linear interpolation; if cash turns negative again later, payback is reported only once it recovers again. Portfolio payback applies the same rule to the summed monthly flows. Discounted payback uses discounted monthly flows. Returns beyond the horizon are shown explicitly.</p><p><b>ROI (total cost basis):</b> (horizon benefits − horizon costs) ÷ horizon costs. <b>Capital ROI:</b> the same net benefit ÷ initial capital. ROI on total cost basis is a headline portfolio and project metric; capital ROI appears in each project's cash-flow view. IRR above 100% is summarized as “>100%” in the portfolio table because small initial capital makes it unstable for ranking; the exact value is in project detail and on hover. The reference's capital deployed convention includes first-year operating costs; the tool labels its initial capital basis separately.</p><h3>Funding, risk and break-even</h3><p><b>Year-1 funding request:</b> initial capital + the first twelve months of scheduled running costs. It is a budgeting figure; it does not change NPV, IRR or payback, which keep one-time costs at month 0 and running costs in the month they occur. <b>Total cost of ownership:</b> initial capital + all running costs over the horizon, undiscounted. <b>Risk-adjusted NPV:</b> probability of success × NPV − (1 − probability) × initial capital. Each project's probability starts from its stage (defaults: Idea 30%, Pilot 60%, Production 90%) and is multiplied by 0.80 for each high delivery risk, 0.90 for each medium risk and, for pilots and production projects, 0.85 for each missing required approval, with a 5% floor; all are editable in the Scenario lab. Not assessed ratings are neutral (× 1) and flagged. A limited sponsor multiplies by 0.90 and a missing sponsor by 0.75. Staffing is deliberately excluded because it already changes cash flows; it does set the Team capacity rating (below 50% staffed High, below 100% Medium, otherwise Low) when a team need is entered. A per-project override applies only with a written reason, and the rule-based value stays visible. A failed project is assumed to stop at its planned full-benefit point, losing its initial capital plus the net running and team costs incurred while it was being delivered (discounted). <b>Break-even:</b> NPV is linear in each driver, so the tool solves it directly. Estimated benefits must reach (initial capital + PV of all running costs) ÷ PV of benefits. Costs can rise by PV of benefits ÷ (initial capital + PV of costs) − 1. Adoption must reach current adoption × (initial capital + PV of fixed costs) ÷ (PV of benefits − PV of usage costs). Each holds every other assumption fixed.</p><h3>Unit economics</h3><p>Usage-based cost = cost per unit × annual volume × adoption × ramp × benefit growth, so it starts with usage and is never charged during a rollout delay. Fixed running costs are unchanged. Steady-state cost per unit = (fixed running costs + usage cost) ÷ (volume × adoption); benefit per unit uses the cash benefit case. The example projects keep their reference compute costs as fixed costs, and their volumes are illustrative.</p><h3>Readiness and compliance</h3><p>Data readiness, integration, vendor dependency and team capacity are rated low, medium or high risk. Two or more high risks → Not ready; one high or two or more medium → At risk; anything unassessed → Incomplete; otherwise Ready. Readiness informs the decision but does not change the recommendation. Security review is always required, legal & privacy review is required for personal data, and model risk review for high-risk AI. A pilot or production project missing a required approval is Blocked and recommended for intervention; an idea is Pending.</p><h3>Reference payback is shown separately</h3><p>The reference uses (implementation + first-year operating costs) ÷ (annual direct savings + productivity − annual operating costs), excluding indirect gains. This simplified ratio is available in project detail. It ignores actual ramp and adoption and counts first-year operating costs in the numerator as well as the annual net benefit denominator. Our primary payback uses the monthly cash schedule. The reference also contains conflicting example payback summaries, so they are not copied as validated outputs.</p><h3>Health signals and decision rules</h3><p>Reference adoption alerts: below 40% after three months → monitor; below 20% after six months → red flag requiring a recovery plan review. Two yellow signals → investigate; two red → escalate. Application policy additionally investigates any single red. Pipeline thresholds (98% watch, below 95% red) are configurable product assumptions represented here as fixed demo policy. Accuracy is yellow when below its project target and flat or declining. Missing sponsor is red; limited engagement is yellow.</p><p>Ideas are recommended to Validate (positive NPV: measure a baseline and plan a pilot) or Rework (NPV ≤ 0). For pilots and production projects: intervene when evidence is incomplete, required approvals are missing, or health requires investigation/escalation; otherwise rework when NPV ≤ 0, scale a production investment with ≥ 80% adoption and positive NPV, or continue. Two cautions are shown beside the recommendation without changing it: a positive NPV that turns negative once the chance of failure is priced in, and a positive NPV that measured KPI progress does not yet support. These deterministic recommendations support human judgment. They are not autonomous funding decisions.</p><h3>Evidence and compute links</h3><p><b>KPI progress</b> = improvement achieved ÷ improvement targeted, from the baseline to the latest observed value, capped at 100% and floored at 0%. It needs a launched project, a baseline that is not missing, and a target that improves on the baseline; a partial baseline is marked provisional. <b>Evidence-adjusted NPV</b> = NPV − (1 − progress) × PV of estimated benefits, i.e. benefits scaled to measured progress. It assumes cash benefit moves in proportion to the KPI, is shown beside the forecast and never replaces it. <b>Compute vs budget</b> adds a health signal (more than 10% over yellow, more than 25% red) and reports the present value of the overrun over the horizon, the NPV that would be recovered by returning to budget.</p><h3>Shared tech team</h3><p>The tech team is a shared pool by role (default 25 people: 8 ML engineers, 7 data engineers, 6 software engineers, 4 MLOps & platform), each with an editable loaded annual cost. Every project states the people it needs by role to build and the full-time equivalents needed to run it. <b>Coverage</b> is assigned ÷ needed for the most short-staffed role. Time to full benefit (project delay and ramp; scenario delay is unchanged) is multiplied by 1 ÷ coverage when short, by 1 ÷ √coverage when every role is over-staffed (never less than half), and becomes never when a needed role has nobody. <b>Team cost</b> is charged monthly: the full assigned team until benefits reach full ramp, then the run-support share (run FTE ÷ assigned, capped at all assigned). It counts as a fixed running cost, so it flows into NPV, payback, Year-1 funding, break-even and unit economics. Example cost fields are treated as external and vendor costs, so internal people are not counted twice. Bench people and people left assigned after a build are not charged to projects; the Tech team page reports them separately so the whole team cost is visible. The charge can be switched off to compare; staffing delays still apply. Health adds a team staffing signal: build coverage, or run coverage once in production (below 50% red, below 100% yellow).</p><h3>Scope and limitations</h3><p>USD, nominal, before-tax estimates. No depreciation tax shield, working capital, terminal value, financing, shared infrastructure savings, project dependencies, or budget optimization. Portfolio totals assume additive, independent benefits and costs; check overlap before approval. Data is saved only in this browser. There is no company login, shared database, or live telemetry connection. Export captures assumptions and monthly results for review.</p></article>`;
 }
-// Shared tech team. People assigned to excluded projects still count as assigned.
+// Shared tech team: thin wrappers over portfolio.js using the current state.
+const roleUsage = () => usageOf(state.projects, state.settings.team);
+const moveTeam = (role, from, to, count) => move(state.projects, state.settings.team, role, from, to, count);
 function probabilityText(sp) {
   const parts = [`${sp.base}% stage start`, ...sp.factors.map(f => `${esc(f.name)} × ${f.factor}`)];
   return sp.overridden
     ? `${+sp.value.toFixed(1)}% (override: ${esc(sp.reason)}; rules give ${+sp.computed.toFixed(1)}%)`
     : `${+sp.computed.toFixed(1)}% = ${parts.join(' × ')}${sp.computed === state.settings.probFloor && sp.factors.length ? ' (floor)' : ''}`;
 }
-function roleUsage() {
-  return state.settings.team.map(r => {
-    const assigned = state.projects.reduce((v, p) => v + (p.alloc?.[r.id] || 0), 0);
-    return { ...r, assigned, available: r.headcount - assigned };
-  });
-}
-// Moves up to count people of one role between a project and another project or the bench.
-function moveTeam(role, from, to, count) {
-  if (from === to) return 0;
-  const usage = roleUsage().find(r => r.id === role),
-    src = from === 'bench' ? null : state.projects.find(p => p.id === from),
-    dst = to === 'bench' ? null : state.projects.find(p => p.id === to),
-    n = Math.min(count, src ? src.alloc[role] || 0 : usage.available);
-  if (n <= 0) return 0;
-  if (src) src.alloc[role] -= n;
-  if (dst) dst.alloc[role] = (dst.alloc[role] || 0) + n;
-  return n;
-}
-const months = v => (v === Infinity ? 'Never' : +v.toFixed(1) + ' mo');
+
 function teamHints(roles, res) {
   const hints = [];
   for (const r of roles) {
@@ -643,7 +510,7 @@ const specs = [
 ];
 function detailResults(p) {
   const r = calculate(p, state.settings);
-  return `<div class="detail-results"><div><small>NPV</small><strong>${short(r.npv)}</strong></div><div><small>Payback</small><strong>${pb(r.payback)}</strong></div><div><small>ROI (total costs)</small><strong>${pct(r.roi)}</strong></div><div><small>IRR (annualized)</small><strong>${pct(r.irr)}</strong></div><div><small>Risk-adjusted NPV</small><strong>${short(r.riskAdjustedNPV)}</strong></div><div><small>Year-1 funding</small><strong>${short(r.fundingRequest)}</strong></div><div><small>Evidence-adjusted NPV</small><strong>${r.evidence.applicable ? short(r.evidence.npv) : '—'}</strong></div><div><small>KPI progress</small><strong>${r.evidence.applicable ? Math.round(r.evidence.progress * 100) + '%' : '—'}</strong></div></div><p class="evidence">${recBadge(r.recommendation)} · ${r.health.action} · ${state.settings.capacity ? 'Includes capacity proxy' : 'Cash benefits only'}</p>`;
+  return `<div class="detail-results"><div><small>NPV</small><strong>${short(r.npv)}</strong></div><div><small>Payback</small><strong>${pb(r.payback)}</strong></div><div><small>ROI (total costs)</small><strong>${pct(r.roi)}</strong></div><div><small>IRR (annualized)</small><strong>${pct(r.irr)}</strong></div><div><small>Risk-adjusted NPV</small><strong>${short(r.riskAdjustedNPV)}</strong></div><div><small>Year-1 funding</small><strong>${short(r.fundingRequest)}</strong></div><div><small>Evidence-adjusted NPV</small><strong>${r.evidence.applicable ? short(r.evidence.npv) : '—'}</strong></div><div><small>KPI progress</small><strong>${r.evidence.applicable ? Math.round(r.evidence.progress * 100) + '%' : '—'}</strong></div></div><p class="evidence">${recBadge(r.recommendation, r.cautions)} · ${r.health.action} · ${state.settings.capacity ? 'Includes capacity proxy' : 'Cash benefits only'}</p>`;
 }
 function detailCash(p) {
   const r = calculate(p, state.settings);
@@ -781,429 +648,8 @@ function closeDetail() {
   selected = null;
   $(`[data-project="${id}"]`)?.focus();
 }
-// Add-automation questionnaire: every assumption is asked for explicitly; nothing is inherited from an example.
-const wizardBlank = {
-  name: '',
-  team: '',
-  owner: '',
-  stage: 'Idea',
-  age: 0,
-  description: '',
-  upfront: '',
-  data: 0,
-  training: 0,
-  compute: '',
-  storage: 0,
-  maintenance: 0,
-  oversight: 0,
-  costGrowth: 0,
-  computeBudget: '',
-  direct: '',
-  growth: 0,
-  indirect: 0,
-  indirectCash: 0,
-  hours: 0,
-  hourly: 0,
-  realization: 0,
-  adoption: '',
-  ramp: '',
-  delay: 0,
-  kpi: '',
-  unit: '',
-  direction: 'lower',
-  baseline: 'Missing',
-  before: '',
-  target: '',
-  after: '',
-  sponsor: 'Engaged',
-  pipeline: '',
-  accuracy: '',
-  accuracyTarget: '',
-  need_ml: 0,
-  need_data: 0,
-  need_sw: 0,
-  need_ops: 0,
-  runNeed: 0,
-  trend: 0,
-  evidence: '',
-  volume: '',
-  volumeUnit: '',
-  unitCost: '',
-  dataReadiness: 'Not assessed',
-  integration: 'Not assessed',
-  vendorRisk: 'Not assessed',
-  teamCapacity: 'Not assessed',
-  dataSensitivity: 'Internal',
-  aiRisk: 'Minimal',
-  securityReview: 'Not started',
-  legalReview: 'Not started',
-  modelRiskReview: 'Not started',
-};
-const wizardSteps = [
-  {
-    title: 'The idea',
-    intro: 'Describe the automation and who is accountable for its results.',
-    fields: [
-      [
-        'name',
-        'Automation name',
-        'text',
-        { required: 1, maxlength: 90, placeholder: 'e.g. Contract review assistant' },
-      ],
-      ['team', 'Department', 'text', { required: 1, maxlength: 60, placeholder: 'e.g. Legal' }],
-      [
-        'owner',
-        'Executive owner',
-        'text',
-        { required: 1, maxlength: 60, placeholder: 'e.g. General Counsel' },
-      ],
-      ['stage', 'Current stage', 'select', { options: ['Idea', 'Pilot', 'Production'] }],
-      [
-        'age',
-        'Months since launch',
-        'number',
-        { min: 0, max: 120, step: 1, help: 'Use 0 if it has not launched.' },
-      ],
-      [
-        'description',
-        'What problem does it solve?',
-        'textarea',
-        { maxlength: 300, wide: 1, placeholder: 'One or two sentences' },
-      ],
-    ],
-  },
-  {
-    title: 'One-time costs',
-    intro: 'Spent before go-live and counted at month 0.',
-    fields: [
-      [
-        'upfront',
-        'Implementation and integration ($)',
-        'money',
-        { required: 1, help: 'Build, vendor setup, integration.' },
-      ],
-      ['data', 'Data preparation ($)', 'money', { help: 'Cleaning, labeling, pipelines.' }],
-      [
-        'training',
-        'Training and change management ($)',
-        'money',
-        { help: 'User training, process redesign.' },
-      ],
-    ],
-  },
-  {
-    title: 'Running costs',
-    intro:
-      'Fixed annual costs are charged monthly from month 1, including during any rollout delay. Usage-based costs follow adoption and ramp.',
-    fields: [
-      ['compute', 'Compute and inference ($ per year)', 'money', { required: 1 }],
-      ['storage', 'Storage and licences ($ per year)', 'money'],
-      ['maintenance', 'Maintenance and support ($ per year)', 'money'],
-      ['oversight', 'Human oversight and review ($ per year)', 'money'],
-      ['costGrowth', 'Running cost growth (% per year)', 'number', { min: 0, max: 50 }],
-      [
-        'computeBudget',
-        'Approved compute budget ($ per year)',
-        'money',
-        { help: 'Blank uses the fixed compute cost.' },
-      ],
-      [
-        'volume',
-        'Annual volume at full adoption',
-        'number',
-        { min: 0, max: 1e12, help: 'Requests, documents or items processed per year.' },
-      ],
-      ['volumeUnit', 'Volume unit', 'text', { maxlength: 40, placeholder: 'e.g. contracts reviewed' }],
-      [
-        'unitCost',
-        'Usage-based cost per unit ($)',
-        'number',
-        { min: 0, max: 1e6, help: 'Inference or API cost that scales with use. 0 if compute is fixed.' },
-      ],
-    ],
-  },
-  {
-    title: 'Estimated benefits',
-    intro:
-      'Annual benefits at full adoption. Only cash counts by default; recovered hours are reported separately as capacity.',
-    note: 'Do not count the same labour twice. If headcount, hiring or contractor spend falls, enter it as direct savings and leave those hours out of capacity.',
-    fields: [
-      [
-        'direct',
-        'Direct cash savings ($ per year)',
-        'money',
-        { required: 1, help: 'Costs reduced or avoided.' },
-      ],
-      ['growth', 'Benefit growth (% per year)', 'number', { min: 0, max: 50 }],
-      ['indirect', 'Indirect gains ($ per year)', 'money', { help: 'Quality, retention, revenue uplift.' }],
-      [
-        'indirectCash',
-        'Share of indirect gains that is cash (%)',
-        'number',
-        { min: 0, max: 100, help: 'Only this share enters cash flows.' },
-      ],
-      [
-        'hours',
-        'Hours recovered per year',
-        'number',
-        { min: 0, max: 1e7, help: 'Capacity, not cash, unless redeployed.' },
-      ],
-      ['hourly', 'Loaded cost per hour ($)', 'number', { min: 0, max: 10000 }],
-      ['realization', 'Share of hours put to productive use (%)', 'number', { min: 0, max: 100 }],
-    ],
-  },
-  {
-    title: 'Rollout',
-    intro: 'How quickly the benefits arrive.',
-    fields: [
-      [
-        'adoption',
-        'Expected adoption at steady state (%)',
-        'number',
-        { required: 1, min: 0, max: 100, help: 'Share of intended users or volume.' },
-      ],
-      ['ramp', 'Months to reach full benefit', 'number', { required: 1, min: 1, max: 60, step: 1 }],
-      [
-        'delay',
-        'Months before benefits start',
-        'number',
-        { min: 0, max: 60, step: 1, help: 'Running costs are still charged.' },
-      ],
-      ['need_ml', 'ML engineers needed to build', 'number', { min: 0, max: 100, step: 1 }],
-      ['need_data', 'Data engineers needed', 'number', { min: 0, max: 100, step: 1 }],
-      ['need_sw', 'Software engineers needed', 'number', { min: 0, max: 100, step: 1 }],
-      ['need_ops', 'MLOps & platform needed', 'number', { min: 0, max: 100, step: 1 }],
-      [
-        'runNeed',
-        'Run support after launch (FTE)',
-        'number',
-        { min: 0, max: 100, help: 'People kept on once benefits reach full ramp.' },
-      ],
-    ],
-  },
-  {
-    title: 'Readiness',
-    intro: 'Delivery risks and the approvals needed before rollout.',
-    note: 'Security review is always required. Legal & privacy review is also required for personal data, and model risk review for high-risk AI. A pilot or production project without its required approvals is recommended for intervention.',
-    fields: [
-      [
-        'dataReadiness',
-        'Data readiness risk',
-        'select',
-        {
-          options: [
-            ['Not assessed', 'Not assessed'],
-            ['Low', 'Low risk'],
-            ['Medium', 'Medium risk'],
-            ['High', 'High risk'],
-          ],
-        },
-      ],
-      [
-        'integration',
-        'Integration complexity',
-        'select',
-        {
-          options: [
-            ['Not assessed', 'Not assessed'],
-            ['Low', 'Low risk'],
-            ['Medium', 'Medium risk'],
-            ['High', 'High risk'],
-          ],
-        },
-      ],
-      [
-        'vendorRisk',
-        'Vendor dependency',
-        'select',
-        {
-          options: [
-            ['Not assessed', 'Not assessed'],
-            ['Low', 'Low risk'],
-            ['Medium', 'Medium risk'],
-            ['High', 'High risk'],
-          ],
-        },
-      ],
-      [
-        'teamCapacity',
-        'Team capacity risk',
-        'select',
-        {
-          options: [
-            ['Not assessed', 'Not assessed'],
-            ['Low', 'Low risk'],
-            ['Medium', 'Medium risk'],
-            ['High', 'High risk'],
-          ],
-          help: 'Replaced by actual staffing once team needs are entered on the Rollout step.',
-        },
-      ],
-      [
-        'dataSensitivity',
-        'Data sensitivity',
-        'select',
-        { options: ['Public', 'Internal', 'Confidential', 'Personal'] },
-      ],
-      [
-        'aiRisk',
-        'AI risk level',
-        'select',
-        {
-          options: ['Minimal', 'Limited', 'High'],
-          help: 'High: decisions about people, safety or credit, e.g. EU AI Act high-risk uses.',
-        },
-      ],
-      [
-        'securityReview',
-        'Security review',
-        'select',
-        { options: ['Not started', 'In progress', 'Approved'] },
-      ],
-      [
-        'legalReview',
-        'Legal & privacy review',
-        'select',
-        { options: ['Not started', 'In progress', 'Approved'] },
-      ],
-      [
-        'modelRiskReview',
-        'Model risk review',
-        'select',
-        { options: ['Not started', 'In progress', 'Approved'] },
-      ],
-    ],
-  },
-  {
-    title: 'Evidence',
-    intro: 'What will prove it works, and what is measured today. Leave unknowns blank.',
-    fields: [
-      [
-        'kpi',
-        'Business KPI',
-        'text',
-        { required: 1, maxlength: 80, placeholder: 'e.g. Contract review time' },
-      ],
-      ['unit', 'KPI unit', 'text', { required: 1, maxlength: 20, placeholder: 'e.g. hours' }],
-      [
-        'direction',
-        'Better is',
-        'select',
-        {
-          options: [
-            ['lower', 'Lower'],
-            ['higher', 'Higher'],
-          ],
-        },
-      ],
-      [
-        'baseline',
-        'Baseline quality',
-        'select',
-        {
-          options: ['Missing', 'Partial', 'Verified'],
-          help: 'Verified = measured before launch on comparable work.',
-        },
-      ],
-      ['before', 'Baseline value', 'number', { min: 0, max: 1e9 }],
-      ['target', 'Target value', 'number', { min: 0, max: 1e9 }],
-      ['after', 'Latest observed value', 'number', { min: 0, max: 1e9, help: 'Blank uses the baseline.' }],
-      ['sponsor', 'Sponsor engagement', 'select', { options: ['Engaged', 'Limited', 'Missing'] }],
-      [
-        'pipeline',
-        'Data pipeline success (%)',
-        'number',
-        { min: 0, max: 100, help: 'Blank if not live yet.' },
-      ],
-      ['accuracy', 'Model accuracy (%)', 'number', { min: 0, max: 100, help: 'Blank if not measured yet.' }],
-      ['accuracyTarget', 'Accuracy target (%)', 'number', { min: 0, max: 100 }],
-      ['trend', 'Accuracy trend (pp per month)', 'number', { min: -10, max: 10 }],
-      [
-        'evidence',
-        'Evidence, attribution and next steps',
-        'textarea',
-        { maxlength: 2500, wide: 1, placeholder: 'Source of each estimate and how results will be verified' },
-      ],
-    ],
-  },
-  {
-    title: 'Review',
-    intro: 'Check the business case before it joins the portfolio. Everything stays editable afterwards.',
-  },
-];
+const wizardProject = d => buildProject(d, roleUsage());
 let wiz = { step: 0, draft: { ...wizardBlank } };
-function wizardProject(d) {
-  const n = k => (d[k] === '' || d[k] == null ? 0 : +d[k]),
-    t = k => String(d[k] ?? '').trim();
-  const p = {
-    ...structuredClone(projectDefaults),
-    name: t('name'),
-    team: t('team'),
-    owner: t('owner'),
-    stage: d.stage,
-    description: t('description') || 'New AI investment business case.',
-    kpi: t('kpi'),
-    unit: t('unit'),
-    direction: d.direction,
-    baseline: d.baseline,
-    sponsor: d.sponsor,
-    volumeUnit: t('volumeUnit') || 'transactions',
-    dataReadiness: d.dataReadiness,
-    integration: d.integration,
-    vendorRisk: d.vendorRisk,
-    teamCapacity: d.teamCapacity,
-    dataSensitivity: d.dataSensitivity,
-    aiRisk: d.aiRisk,
-    securityReview: d.securityReview,
-    legalReview: d.legalReview,
-    modelRiskReview: d.modelRiskReview,
-  };
-  for (const k of [
-    'volume',
-    'unitCost',
-    'upfront',
-    'data',
-    'training',
-    'compute',
-    'storage',
-    'maintenance',
-    'oversight',
-    'costGrowth',
-    'direct',
-    'growth',
-    'indirect',
-    'indirectCash',
-    'hours',
-    'hourly',
-    'realization',
-    'adoption',
-    'ramp',
-    'delay',
-    'before',
-    'target',
-    'trend',
-    'age',
-  ])
-    p[k] = n(k);
-  p.ramp = Math.max(1, p.ramp);
-  p.computeBudget = d.computeBudget === '' ? p.compute : n('computeBudget');
-  // Needed people are assigned from whoever is on the bench now.
-  p.runNeed = n('runNeed');
-  for (const r of roleUsage()) {
-    p.need[r.id] = n('need_' + r.id);
-    p.alloc[r.id] = Math.min(p.need[r.id], Math.max(0, r.available));
-  }
-  p.after = d.after === '' ? p.before : n('after');
-  const unmeasured = [];
-  p.pipeline = d.pipeline === '' ? (unmeasured.push('data pipeline'), 100) : n('pipeline');
-  p.accuracy = d.accuracy === '' ? (unmeasured.push('model accuracy'), 0) : n('accuracy');
-  p.accuracyTarget = d.accuracy === '' ? 0 : d.accuracyTarget === '' ? p.accuracy : n('accuracyTarget');
-  p.evidence =
-    (t('evidence') ||
-      'New forecast. Establish a prelaunch baseline and validate all cost and benefit assumptions.') +
-    (unmeasured.length ? ` Not yet measured: ${unmeasured.join(', ')}.` : '');
-  return p;
-}
 function wizardField([key, label, type, o = {}]) {
   const v = wiz.draft[key] ?? '',
     req = o.required ? ' required' : '';
@@ -1241,7 +687,10 @@ function wizardReview() {
       `<section><div class="review-head"><h3>${title}</h3><button type="button" class="text-btn" data-step="${step}">Edit</button></div><dl>${rows.join('')}</dl></section>`;
   const warnings = [
     p.baseline !== 'Verified' &&
-      'Baseline is not verified, so the recommendation will be Intervene until evidence is in place.',
+      (p.stage === 'Idea'
+        ? 'No verified baseline yet: measure one before the pilot so results can be proven.'
+        : 'Baseline is not verified, so the recommendation will be Intervene until evidence is in place.'),
+    ...r.cautions,
     p.direct > 0 &&
       p.hours > 0 &&
       'Direct savings and recovered hours are both entered. Confirm they do not describe the same labour.',
@@ -1353,13 +802,7 @@ $('#rate').oninput = e => {
 };
 $('#reset').onclick = () => {
   if (!confirm('Reset all local changes and restore the five examples?')) return;
-  state = {
-    projects: structuredClone(examples),
-    settings: structuredClone(defaults),
-    excluded: [],
-    view: state.view,
-    scenario: 'base',
-  };
+  state = { ...freshState(), view: state.view };
   query = '';
   closeDetail();
   render();

@@ -8,22 +8,26 @@ Build and maintain an executive decision workspace for AI automation investments
 
 ## Source map
 
-- `dist/model.js`: pure finance calculations, five illustrative projects, health rules.
-- `dist/app.js`: state, portfolio aggregation, live editing, views, export.
+- `dist/model.js`: pure finance calculations, five illustrative projects, staffing, probability, evidence, health, readiness and compliance rules.
+- `dist/portfolio.js`: saved-state migration, portfolio aggregation, team usage and moves (no DOM).
+- `dist/wizard.js`: add-automation questionnaire definitions and project builder (no DOM).
+- `dist/format.js`: display formatting and escaping.
+- `dist/app.js`: state, live editing, views, event binding, export.
 - `dist/style.css`: responsive visual system.
 - `dist/index.html`: semantic application shell.
 - `tests/model.test.mjs`: independent numerical and boundary checks.
+- `tests/portfolio.test.mjs`: migration, aggregation, team moves and questionnaire builder.
 - `docs/ARCHITECTURE.md`, `docs/PLAN.md`, `docs/DESIGN.md`, `docs/METRICS.md`: design and implementation authority.
 
 ## Financial requirements
 
-Use monthly end-of-period cash flows; initial build, data preparation, and training at time zero. Annual discount rate is effective and annualizes monthly IRR. Operating costs start immediately even during rollout delays. Model adoption, ramp, benefit growth, and operating cost growth without applying the same multiplier twice. Return null for missing or ambiguous IRR and unrecovered payback, rather than misleading zeros. Label ROI denominator explicitly. Keep reference ratio payback separate from cash-flow payback.
+Use monthly end-of-period cash flows; initial build, data preparation, and training at time zero. Annual discount rate is effective and annualizes monthly IRR. Operating costs start immediately even during rollout delays. Model adoption, ramp, benefit growth, and operating cost growth without applying the same multiplier twice. Return null for missing or ambiguous IRR and unrecovered payback, rather than misleading zeros. Payback is the final recovery of cumulative cash, for projects and the portfolio alike. Label ROI denominator explicitly. Keep reference ratio payback separate from cash-flow payback.
 
-Capacity hours are not automatic cash savings. Keep capacity off by default. Indirect benefits enter cash flows only through the specified cash-qualified share. Never count the same avoided labor as both direct savings and capacity. Portfolio aggregation assumes independence; flag overlap rather than invent synergies.
+Capacity hours are not automatic cash savings. Keep capacity off by default. Indirect benefits enter cash flows only through the specified cash-qualified share. Never count the same avoided labor as both direct savings and capacity. Portfolio aggregation assumes independence; flag overlap rather than invent synergies. Each risk affects one channel only (probability, timing, cost or benefit); staffing changes timing and cost, so it stays out of probability. Internal team cost is charged separately from the example cost fields, which are treated as external.
 
 ## Product requirements
 
-Retain five example investments, add/duplicate/remove, include/exclude, live editing, scenarios, sensitivity, monthly cash audit, baseline evidence, health indicators, rule-based recommendation, JSON export, and browser-local persistence. Use safe text escaping for user-entered content. Validate numeric inputs. Support small screens, keyboard focus, dialogs, clear empty states and unavailable metrics.
+Retain five example investments, the add-automation questionnaire, duplicate/remove, the shared tech team, funding plan, break-even, risk- and evidence-adjusted NPV, include/exclude, live editing, scenarios, sensitivity, monthly cash audit, baseline evidence, health indicators, rule-based recommendation, JSON export, and browser-local persistence. Use safe text escaping for user-entered content. Validate numeric inputs. Support small screens, keyboard focus, dialogs, clear empty states and unavailable metrics.
 
 ## Scope
 
@@ -31,4 +35,4 @@ This is a working browser-local MVP. There is no LLM funding agent, user authent
 
 ## Changes and validation
 
-Run the financial suite for model changes. Verify representative interactions in a browser when available. Preserve the private Sites audience. Do not persist repository credentials. Source reference includes inconsistent payback summaries; explain and independently calculate instead of reproducing them blindly.
+Run the full suite (`npm test`) for model or portfolio logic changes. When adding a project field, add it to `projectDefaults` so examples and older saves receive it. Verify representative interactions in a browser when available. Preserve the private Sites audience. Do not persist repository credentials. Source reference includes inconsistent payback summaries; explain and independently calculate instead of reproducing them blindly.

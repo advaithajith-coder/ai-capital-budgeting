@@ -260,3 +260,33 @@ test('Compute overrun is flagged and its cost equals the NPV gap to budget', () 
   assert.ok(Math.abs(r.compute.pvCost - (calculate({ ...p, compute: 1200 }).npv - r.npv)) < 1e-6);
   assert.equal(computeOverrun({ ...p, computeBudget: 0 }), null);
 });
+test('Every example carries every project field, including the probability override', () => {
+  for (const p of examples) {
+    for (const k of ['probOverrideOn', 'probOverride', 'probReason', 'need', 'alloc', 'runNeed']) assert.ok(k in p, `${p.id}.${k}`);
+    assert.equal(p.probReason, '');
+  }
+  const r = calculate({ ...examples[0], probOverrideOn: true, probReason: 'Signed contract', probOverride: undefined });
+  assert.ok(Number.isFinite(r.probability));
+  assert.equal(r.success.overrideMissingPct, true);
+});
+test('No observation period yet is not treated as zero progress', () => {
+  const p = { ...simple, stage: 'Pilot', baseline: 'Verified', direction: 'lower', before: 10, target: 5, after: 10 };
+  assert.equal(evidenceProgress({ ...p, age: 0 }).applicable, false);
+  assert.equal(evidenceProgress({ ...p, age: 3 }).progress, 0);
+});
+test('Failure loses initial capital plus costs incurred until planned full benefit', () => {
+  const p = { ...simple, stage: 'Pilot', dataReadiness: 'Low', integration: 'Low', vendorRisk: 'Low', teamCapacity: 'Low', compute: 1200, delay: 2 },
+    r = calculate(p, { ...defaults, rate: 0 });
+  assert.equal(r.team.monthsToFull, 3);
+  assert.equal(r.failureLoss, 1000 + 3 * 100);
+  assert.ok(Math.abs(r.riskAdjustedNPV - (0.6 * r.npv - 0.4 * 1300)) < 1e-9);
+});
+test('Ideas are validated or reworked, and cautions flag weak risk or evidence support', () => {
+  assert.equal(calculate({ ...simple, stage: 'Idea', baseline: 'Missing' }).recommendation, 'Validate');
+  assert.equal(calculate({ ...simple, stage: 'Idea', direct: 0 }).recommendation, 'Rework');
+  const fragile = calculate({ ...simple, stage: 'Pilot', direct: 1100 }, { ...defaults, rate: 0, years: 2, probPilot: 30 });
+  assert.ok(fragile.npv > 0 && fragile.riskAdjustedNPV <= 0);
+  assert.equal(fragile.cautions.length, 1);
+  const unproven = calculate({ ...simple, stage: 'Pilot', age: 4, baseline: 'Verified', direction: 'lower', before: 10, target: 5, after: 9 });
+  assert.ok(unproven.cautions.some(c => c.startsWith('Measured results')));
+});

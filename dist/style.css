@@ -1374,3 +1374,8 @@ input.mini.wide {
   color: var(--muted);
   font-weight: 400;
 }
+.caution {
+  color: var(--amber);
+  margin-left: 6px;
+  cursor: help;
+}

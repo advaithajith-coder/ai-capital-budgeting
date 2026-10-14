@@ -331,7 +331,7 @@ export const examples = [
     evidence:
       'Reference: 0 failures in 6 months versus historical 4/year. This does not establish an annual zero-failure rate; validate seasonality and avoided-event attribution.',
   },
-];
+].map(e => ({ ...structuredClone(projectDefaults), ...e }));
 export const setup = p => p.upfront + p.data + p.training;
 export const operating = p => p.compute + p.storage + p.maintenance + p.oversight;
 // Staffing from the shared team. Coverage is the weakest role's assigned ÷ needed. Time to full benefit
@@ -469,7 +469,8 @@ export function successProbability(p, s = defaults) {
     for (const name of compliance(p).missing) factors.push({ name: name + ' missing', factor: s.approvalFactor });
   const computed = Math.max(s.probFloor, factors.reduce((v, x) => v * x.factor, base)),
     reason = String(p.probReason || '').trim(),
-    overridden = !!p.probOverrideOn && reason !== '';
+    validPct = Number.isFinite(p.probOverride),
+    overridden = !!p.probOverrideOn && reason !== '' && validPct;
   return {
     base,
     factors,
@@ -477,6 +478,7 @@ export function successProbability(p, s = defaults) {
     computed,
     overridden,
     overrideMissingReason: !!p.probOverrideOn && !reason,
+    overrideMissingPct: !!p.probOverrideOn && !validPct,
     reason,
     value: overridden ? Math.min(100, Math.max(0, p.probOverride)) : computed,
   };
@@ -487,6 +489,7 @@ export function evidenceProgress(p) {
   const better = p.direction === 'higher' ? p.target > p.before : p.target < p.before;
   if (p.stage === 'Idea') return { applicable: false, reason: 'Not launched yet' };
   if (p.baseline === 'Missing') return { applicable: false, reason: 'No baseline' };
+  if (!(p.age > 0)) return { applicable: false, reason: 'No observation period yet' };
   if (!better) return { applicable: false, reason: 'Target is not an improvement on the baseline' };
   const raw = (p.direction === 'higher' ? p.after - p.before : p.before - p.after) / Math.abs(p.target - p.before);
   return { applicable: true, raw, progress: Math.min(1, Math.max(0, raw)), provisional: p.baseline === 'Partial' };
@@ -558,7 +561,8 @@ export function calculate(p, s = defaults) {
     pvBenefits = 0,
     pvFixed = 0,
     pvVariable = 0,
-    pvOverrun = 0;
+    pvOverrun = 0,
+    pvBuildLoss = 0;
   for (let m = 1; m <= months; m++) {
     const yr = Math.floor((m - 1) / 12),
       active = m - effDelay - s.delay;
@@ -579,6 +583,8 @@ export function calculate(p, s = defaults) {
     pvBenefits += benefit * d;
     pvFixed += fixed * d;
     pvVariable += variable * d;
+    // Costs incurred while the project is still being delivered are lost if it fails.
+    pvBuildLoss += cost * d * Math.min(1, Math.max(0, fullAt - (m - 1)));
     if (p.computeBudget > 0)
       pvOverrun +=
         ((((Math.max(0, p.compute - p.computeBudget) / 12) * Math.pow(1 + p.costGrowth / 100, yr) * s.costFactor) / 100) * d);
@@ -609,7 +615,11 @@ export function calculate(p, s = defaults) {
     evidence = evidenceProgress(p),
     comply = compliance(p);
   let recommendation =
-    h.action === 'Escalate' ||
+    p.stage === 'Idea'
+      ? npv <= 0
+        ? 'Rework'
+        : 'Validate'
+      : h.action === 'Escalate' ||
     h.action === 'Investigate' ||
     p.baseline !== 'Verified' ||
     comply.status === 'Blocked'
@@ -619,17 +629,25 @@ export function calculate(p, s = defaults) {
         : p.stage === 'Production' && p.adoption >= 80
           ? 'Scale'
           : 'Continue';
+  const riskAdjustedNPV = probability * npv - (1 - probability) * (cap + pvBuildLoss),
+    evidenceNPV = evidence.applicable ? npv - (1 - evidence.progress) * pvBenefits : null,
+    cautions = [];
+  if (npv > 0 && riskAdjustedNPV <= 0) cautions.push('Positive NPV, but negative once the chance of failure is priced in');
+  if (npv > 0 && evidenceNPV !== null && evidenceNPV <= 0)
+    cautions.push('Measured results do not yet support a positive NPV');
   return {
     npv,
+    cautions,
     irr: irr(flows),
     payback: paybackMonths(flows),
     discountedPayback: paybackMonths(pvFlows),
     fundingRequest: cap + yearly[0].cost,
     probability,
     success,
-    evidence: { ...evidence, npv: evidence.applicable ? npv - (1 - evidence.progress) * pvBenefits : null },
+    evidence: { ...evidence, npv: evidenceNPV },
     compute: { overrun: computeOverrun(p), pvCost: pvOverrun },
-    riskAdjustedNPV: probability * npv - (1 - probability) * cap,
+    failureLoss: cap + pvBuildLoss,
+    riskAdjustedNPV,
     pvBenefits,
     pvFixed,
     pvVariable,
