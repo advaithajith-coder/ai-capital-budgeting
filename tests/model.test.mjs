@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculate, defaults, examples, irr, health, readiness, compliance, paybackMonths, staffing } from '../dist/model.js';
+import { calculate, defaults, examples, irr, health, readiness, compliance, paybackMonths, staffing, successProbability } from '../dist/model.js';
 const simple = {
   ...examples[0],
   upfront: 1000,
@@ -113,7 +113,8 @@ test('Break-even multipliers return NPV to zero', () => {
   assert.equal(calculate({ ...simple, direct: 0 }).breakEven.benefits, null);
 });
 test('Risk-adjusted NPV weights success by stage and loses initial capital on failure', () => {
-  const p = { ...simple, stage: 'Pilot' },
+  const lowRisk = { dataReadiness: 'Low', integration: 'Low', vendorRisk: 'Low', teamCapacity: 'Low' },
+    p = { ...simple, ...lowRisk, stage: 'Pilot' },
     r = calculate(p);
   assert.ok(Math.abs(r.riskAdjustedNPV - (0.6 * r.npv - 0.4 * 1000)) < 1e-9);
   assert.equal(calculate({ ...p, stage: 'Idea' }, { ...defaults, probIdea: 100 }).riskAdjustedNPV, r.npv);
@@ -192,4 +193,34 @@ test('Switching team cost off keeps staffing delays but removes the charge', () 
   assert.equal(off.team.totalCost, 0);
   assert.equal(off.team.monthsToFull, calculate(p, oneRole).team.monthsToFull);
   assert.equal(off.flows[4], 0);
+});
+test('Success probability adjusts the stage base for delivery risks and missing approvals', () => {
+  const p = {
+    ...simple,
+    stage: 'Pilot',
+    dataReadiness: 'High',
+    integration: 'Not assessed',
+    vendorRisk: 'High',
+    teamCapacity: 'Medium',
+    dataSensitivity: 'Personal',
+    securityReview: 'Not started',
+    legalReview: 'In progress',
+  };
+  const sp = successProbability(p);
+  assert.ok(Math.abs(sp.computed - 60 * 0.8 * 0.8 * 0.9 * 0.85 * 0.85) < 1e-9);
+  assert.deepEqual(sp.unassessed, ['Integration']);
+  assert.ok(Math.abs(calculate(p).probability - sp.computed / 100) < 1e-12);
+  assert.equal(successProbability({ ...p, stage: 'Idea' }).factors.length, 3);
+  assert.equal(successProbability(p, { ...defaults, riskHigh: 0.01 }).computed, defaults.probFloor);
+});
+test('Not assessed ratings are neutral and an override needs a reason', () => {
+  const p = { ...simple, stage: 'Production', dataReadiness: 'Not assessed', integration: 'Not assessed', vendorRisk: 'Not assessed', teamCapacity: 'Not assessed' };
+  assert.equal(successProbability(p).computed, 90);
+  assert.equal(successProbability(p).unassessed.length, 4);
+  const noReason = successProbability({ ...p, probOverrideOn: true, probOverride: 40, probReason: '  ' });
+  assert.equal(noReason.value, 90);
+  assert.equal(noReason.overrideMissingReason, true);
+  const withReason = successProbability({ ...p, probOverrideOn: true, probOverride: 40, probReason: 'Vendor contract signed' });
+  assert.equal(withReason.value, 40);
+  assert.equal(withReason.overridden, true);
 });

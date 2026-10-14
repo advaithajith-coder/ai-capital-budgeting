@@ -1361,3 +1361,12 @@ input.mini.wide {
 .team-grid > * {
   min-width: 0;
 }
+.flag {
+  color: var(--amber);
+}
+.override {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 4px 12px 12px;
+  margin-top: 12px;
+}

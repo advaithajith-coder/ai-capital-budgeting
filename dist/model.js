@@ -8,6 +8,11 @@ export const defaults = {
   probIdea: 30,
   probPilot: 60,
   probProduction: 90,
+  // Project adjustments to the stage probability. Unassessed ratings stay neutral (× 1).
+  riskHigh: 0.8,
+  riskMedium: 0.9,
+  approvalFactor: 0.85,
+  probFloor: 5,
   // Shared internal tech team. Loaded annual cost per person; headcount totals 25.
   teamCost: true,
   team: [
@@ -34,6 +39,9 @@ export const projectDefaults = {
   need: { ml: 0, data: 0, sw: 0, ops: 0 },
   alloc: { ml: 0, data: 0, sw: 0, ops: 0 },
   runNeed: 0,
+  probOverrideOn: false,
+  probOverride: 50,
+  probReason: '',
 };
 export const examples = [
   {
@@ -422,6 +430,33 @@ export function compliance(p) {
     status: !missing.length ? 'Cleared' : p.stage === 'Idea' ? 'Pending' : 'Blocked',
   };
 }
+// Probability of success: stage starting point × delivery-risk and missing-approval adjustments,
+// floored. A manual override applies only with a written reason.
+export function successProbability(p, s = defaults) {
+  const base = s['prob' + p.stage] ?? 100,
+    factors = [],
+    unassessed = [];
+  for (const item of readiness(p).items) {
+    if (item.level === 2) factors.push({ name: item.name + ' high risk', factor: s.riskHigh });
+    else if (item.level === 1) factors.push({ name: item.name + ' medium risk', factor: s.riskMedium });
+    else if (item.level === null) unassessed.push(item.name);
+  }
+  if (p.stage !== 'Idea')
+    for (const name of compliance(p).missing) factors.push({ name: name + ' missing', factor: s.approvalFactor });
+  const computed = Math.max(s.probFloor, factors.reduce((v, x) => v * x.factor, base)),
+    reason = String(p.probReason || '').trim(),
+    overridden = !!p.probOverrideOn && reason !== '';
+  return {
+    base,
+    factors,
+    unassessed,
+    computed,
+    overridden,
+    overrideMissingReason: !!p.probOverrideOn && !reason,
+    reason,
+    value: overridden ? Math.min(100, Math.max(0, p.probOverride)) : computed,
+  };
+}
 export function breakEven({ cap, pvBenefits, pvFixed, pvVariable }) {
   const costs = cap + pvFixed + pvVariable;
   return {
@@ -522,7 +557,8 @@ export function calculate(p, s = defaults) {
     yearly[yr].cost += cost;
     yearly[yr].net += net;
   }
-  const probability = (s['prob' + p.stage] ?? 100) / 100,
+  const success = successProbability(p, s),
+    probability = success.value / 100,
     steadyVolume = ((p.volume || 0) * p.adoption) / 100,
     runTeam = s.teamCost === false ? 0 : (team.runCost * s.costFactor) / 100,
     unitCost =
@@ -551,6 +587,7 @@ export function calculate(p, s = defaults) {
     discountedPayback: paybackMonths(pvFlows),
     fundingRequest: cap + yearly[0].cost,
     probability,
+    success,
     riskAdjustedNPV: probability * npv - (1 - probability) * cap,
     pvBenefits,
     pvFixed,
