@@ -7,7 +7,8 @@ import { wizardBlank, wizardSteps, coreSteps, detailSteps, buildProject } from '
 // A save from before the readiness, team and probability fields existed.
 const oldSave = () => {
   const projects = structuredClone(examples).map(p => {
-    for (const k of ['need', 'alloc', 'runNeed', 'volume', 'dataReadiness', 'probOverrideOn', 'probReason']) delete p[k];
+    for (const k of ['need', 'alloc', 'runNeed', 'volume', 'dataReadiness', 'probOverrideOn', 'probReason'])
+      delete p[k];
     return p;
   });
   projects[0].direct = 1111111;
@@ -66,12 +67,36 @@ test('Portfolio totals sum included projects and share the project payback rule'
   assert.equal(a.payback, paybackMonths(a.flows));
   const tenYears = aggregate(st.projects, [], { ...st.settings, years: 10 });
   assert.equal(tenYears.payback, paybackMonths(tenYears.flows));
-  assert.equal(aggregate(st.projects, st.projects.map(p => p.id), st.settings).payback, null);
+  assert.equal(
+    aggregate(
+      st.projects,
+      st.projects.map(p => p.id),
+      st.settings,
+    ).payback,
+    null,
+  );
 });
 
 test('Portfolio payback waits for final recovery when cash turns negative again', () => {
   const s = { ...defaults, rate: 0, years: 2, teamCost: false },
-    base = { ...examples[2], upfront: 1000, data: 0, training: 0, compute: 0, storage: 0, maintenance: 0, oversight: 0, indirect: 0, hours: 0, adoption: 100, ramp: 1, delay: 0, growth: 0, need: {}, alloc: {} };
+    base = {
+      ...examples[2],
+      upfront: 1000,
+      data: 0,
+      training: 0,
+      compute: 0,
+      storage: 0,
+      maintenance: 0,
+      oversight: 0,
+      indirect: 0,
+      hours: 0,
+      adoption: 100,
+      ramp: 1,
+      delay: 0,
+      growth: 0,
+      need: {},
+      alloc: {},
+    };
   const early = { ...base, id: 'a', direct: 2400, costGrowth: 0 },
     late = { ...base, id: 'b', upfront: 0, direct: 0, compute: 1200, costGrowth: 400 };
   const a = aggregate([early, late], [], s);
@@ -101,13 +126,30 @@ test('People move between bench and projects without exceeding the pool', () => 
 test('Questionnaire builds a complete project and assigns only free people', () => {
   const st = freshState(),
     usage = roleUsage(st.projects, st.settings.team),
-    draft = { ...wizardBlank, name: ' Contract review ', team: 'Legal', owner: 'GC', stage: 'Pilot', upfront: '150000', compute: '20000', direct: '260000', adoption: '75', ramp: '4', kpi: 'Review time', unit: 'hours', need_ml: '2', need_ops: '1', runNeed: '1' },
+    draft = {
+      ...wizardBlank,
+      name: ' Contract review ',
+      team: 'Legal',
+      owner: 'GC',
+      stage: 'Pilot',
+      upfront: '150000',
+      compute: '20000',
+      direct: '260000',
+      adoption: '75',
+      ramp: '4',
+      kpi: 'Review time',
+      unit: 'hours',
+      need_ml: '2',
+      need_ops: '1',
+      runNeed: '1',
+    },
     p = { ...buildProject(draft, usage), id: 'new' };
   assert.equal(p.name, 'Contract review');
   assert.deepEqual(p.need, { ml: 2, data: 0, sw: 0, ops: 1 });
   const free = Object.fromEntries(usage.map(r => [r.id, Math.max(0, r.available)]));
   assert.deepEqual(p.alloc, { ml: Math.min(2, free.ml), data: 0, sw: 0, ops: Math.min(1, free.ops) });
-  for (const k of Object.keys(examples[0])) if (k !== 'id') assert.equal(typeof p[k], typeof examples[0][k], k);
+  for (const k of Object.keys(examples[0]))
+    if (k !== 'id') assert.equal(typeof p[k], typeof examples[0][k], k);
   assert.ok(migrateSaved({ ...st, projects: [...st.projects, p] }));
   const r = calculate(p, st.settings);
   assert.equal(r.team.stalled, true);
@@ -124,7 +166,12 @@ test('Each shared IT category is split in full by its own basis', () => {
     dataTotal = st.projects.reduce((v, p) => v + p.alloc.data, 0);
   // Data platform follows data engineers: vision and invoice have none assigned.
   assert.equal(by('vision').dataplat, 0);
-  assert.ok(Math.abs(by('demand').dataplat - (cost('dataplat') * st.projects.find(p => p.id === 'demand').alloc.data) / dataTotal) < 1e-6);
+  assert.ok(
+    Math.abs(
+      by('demand').dataplat -
+        (cost('dataplat') * st.projects.find(p => p.id === 'demand').alloc.data) / dataTotal,
+    ) < 1e-6,
+  );
   // Security follows data sensitivity: Personal (3) is three times Internal (1).
   assert.ok(Math.abs(by('support').security - 3 * by('vision').security) < 1e-6);
   // MLOps is equal across live projects; ideas pay nothing.
@@ -137,7 +184,10 @@ test('A category with no basis anywhere stays unallocated', () => {
   const st = freshState(),
     noData = st.projects.map(p => ({ ...p, alloc: { ...p.alloc, data: 0 } })),
     al = sharedAllocation(noData, st.settings);
-  assert.equal(al.categories.find(c => c.id === 'dataplat').unallocated, st.settings.shared.find(c => c.id === 'dataplat').cost);
+  assert.equal(
+    al.categories.find(c => c.id === 'dataplat').unallocated,
+    st.settings.shared.find(c => c.id === 'dataplat').cost,
+  );
   assert.equal(al.byProject.demand.byCategory.dataplat, 0);
 });
 test('Shared IT share is a fixed monthly cost, scaled by the cost multiplier and switchable', () => {
@@ -154,20 +204,45 @@ test('Shared IT share is a fixed monthly cost, scaled by the cost multiplier and
 });
 
 test('Questionnaire has four core steps, optional detail, and asks every field once', () => {
-  assert.deepEqual(coreSteps.map(x => x.key), ['idea', 'costs', 'benefits', 'review']);
-  assert.deepEqual(detailSteps.map(x => x.key), ['usage', 'team', 'readiness', 'evidence']);
+  assert.deepEqual(
+    coreSteps.map(x => x.key),
+    ['idea', 'costs', 'benefits', 'review'],
+  );
+  assert.deepEqual(
+    detailSteps.map(x => x.key),
+    ['usage', 'team', 'readiness', 'evidence'],
+  );
   const asked = wizardSteps.flatMap(x => (x.fields || []).filter(f => f[2] !== 'heading').map(f => f[0]));
   assert.equal(new Set(asked).size, asked.length);
   assert.deepEqual([...asked].sort(), Object.keys(wizardBlank).sort());
   for (const x of detailSteps) assert.ok(x.why, x.key);
   const required = x => (x.fields || []).filter(f => f[3]?.required).map(f => f[0]);
   for (const x of detailSteps) assert.deepEqual(required(x), [], x.key + ' must stay optional');
-  assert.deepEqual(coreSteps.flatMap(required).sort(), ['adoption', 'compute', 'direct', 'name', 'owner', 'ramp', 'team', 'upfront']);
+  assert.deepEqual(coreSteps.flatMap(required).sort(), [
+    'adoption',
+    'compute',
+    'direct',
+    'name',
+    'owner',
+    'ramp',
+    'team',
+    'upfront',
+  ]);
 });
 
 test('Skipping every detail step still builds a valid, flagged project', () => {
   const st = freshState(),
-    draft = { ...wizardBlank, name: 'Quick idea', team: 'Legal', owner: 'GC', upfront: '100000', compute: '10000', direct: '200000', adoption: '60', ramp: '3' },
+    draft = {
+      ...wizardBlank,
+      name: 'Quick idea',
+      team: 'Legal',
+      owner: 'GC',
+      upfront: '100000',
+      compute: '10000',
+      direct: '200000',
+      adoption: '60',
+      ramp: '3',
+    },
     p = { ...buildProject(draft, roleUsage(st.projects, st.settings.team)), id: 'quick' };
   assert.equal(p.kpi, 'Define business KPI');
   assert.equal(p.unit, 'units');
@@ -180,4 +255,31 @@ test('Skipping every detail step still builds a valid, flagged project', () => {
   assert.equal(r.team.planned, false);
   assert.equal(r.success.unassessed.length, 4);
   assert.ok(Number.isFinite(r.npv));
+});
+
+test('A save holding the retired demo calibration is upgraded, but user edits are kept', () => {
+  const st = freshState(),
+    old = {
+      vision: [{ ml: 1, data: 0, sw: 0, ops: 1 }, { ml: 1, data: 0, sw: 0, ops: 1 }, 1.5],
+      support: [{ ml: 2, data: 1, sw: 2, ops: 1 }, { ml: 2, data: 1, sw: 2, ops: 1 }, 1.5],
+      invoice: [{ ml: 1, data: 0, sw: 1, ops: 0 }, { ml: 1, data: 0, sw: 1, ops: 0 }, 1],
+      demand: [{ ml: 2, data: 2, sw: 1, ops: 1 }, { ml: 2, data: 2, sw: 1, ops: 1 }, 1],
+      maintenance: [{ ml: 2, data: 2, sw: 1, ops: 1 }, { ml: 1, data: 2, sw: 1, ops: 1 }, 1],
+    };
+  st.projects.forEach(p => ([p.need, p.alloc, p.runNeed] = structuredClone(old[p.id])));
+  st.projects[3].alloc.ml = 1; // the user moved someone off demand forecasting
+  st.projects[0].direct = 999000; // and edited Vision's savings
+  st.settings.shared.forEach(
+    c => (c.cost = { ai: 180000, dataplat: 150000, mlops: 90000, security: 70000, tools: 60000 }[c.id]),
+  );
+  st.settings.shared[4].cost = 12345; // and changed one category
+  const m = migrateSaved(JSON.parse(JSON.stringify(st)));
+  assert.equal(m.projects[0].runNeed, examples[0].runNeed);
+  assert.equal(m.projects[0].direct, 999000);
+  assert.deepEqual(m.projects[1].alloc, examples[1].alloc);
+  assert.equal(m.projects[3].runNeed, 1);
+  assert.equal(m.projects[3].alloc.ml, 1);
+  assert.equal(m.settings.shared[0].cost, defaults.shared[0].cost);
+  assert.equal(m.settings.shared[4].cost, 12345);
+  assert.equal(defaults.shared[0].cost, 55000);
 });

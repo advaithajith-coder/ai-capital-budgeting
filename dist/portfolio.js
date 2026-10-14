@@ -26,14 +26,59 @@ export const freshState = () => ({
 });
 
 // Returns a usable state from saved JSON, filling fields added in later versions, or null if invalid.
+// Example values from earlier demo calibrations. A saved example that still holds them untouched is
+// upgraded to the current example; anything the user changed is kept as it is.
+const retiredDemo = {
+  projects: {
+    vision: {
+      need: { ml: 1, data: 0, sw: 0, ops: 1 },
+      alloc: { ml: 1, data: 0, sw: 0, ops: 1 },
+      runNeed: 1.5,
+    },
+    support: {
+      need: { ml: 2, data: 1, sw: 2, ops: 1 },
+      alloc: { ml: 2, data: 1, sw: 2, ops: 1 },
+      runNeed: 1.5,
+    },
+    invoice: {
+      need: { ml: 1, data: 0, sw: 1, ops: 0 },
+      alloc: { ml: 1, data: 0, sw: 1, ops: 0 },
+      runNeed: 1,
+    },
+    demand: { need: { ml: 2, data: 2, sw: 1, ops: 1 }, alloc: { ml: 2, data: 2, sw: 1, ops: 1 }, runNeed: 1 },
+    maintenance: {
+      need: { ml: 2, data: 2, sw: 1, ops: 1 },
+      alloc: { ml: 1, data: 2, sw: 1, ops: 1 },
+      runNeed: 1,
+    },
+  },
+  shared: { ai: 180000, dataplat: 150000, mlops: 90000, security: 70000, tools: 60000 },
+};
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function upgradeDemo(projects, settings) {
+  for (const p of projects) {
+    const old = retiredDemo.projects[p.id],
+      now = examples.find(e => e.id === p.id);
+    // Team need, assignment and run support move together, so a partly edited team is left alone.
+    if (old && now && same(p.need, old.need) && same(p.alloc, old.alloc) && p.runNeed === old.runNeed)
+      Object.assign(p, { need: { ...now.need }, alloc: { ...now.alloc }, runNeed: now.runNeed });
+  }
+  for (const c of settings.shared || []) {
+    const now = defaults.shared.find(d => d.id === c.id);
+    if (now && retiredDemo.shared[c.id] === c.cost) c.cost = now.cost;
+  }
+}
 export function migrateSaved(saved) {
-  if (!saved || !Array.isArray(saved.projects) || !saved.settings || typeof saved.settings !== 'object') return null;
+  if (!saved || !Array.isArray(saved.projects) || !saved.settings || typeof saved.settings !== 'object')
+    return null;
   const projects = saved.projects.map(p => ({
       ...structuredClone(projectDefaults),
       ...structuredClone(examples.find(e => e.id === p?.id) || {}),
       ...p,
     })),
     settings = { ...structuredClone(defaults), ...saved.settings };
+  if (Array.isArray(settings.shared)) settings.shared = settings.shared.map(c => ({ ...c }));
+  upgradeDemo(projects, settings);
   const valid =
     projects.every(
       p =>
@@ -45,7 +90,9 @@ export function migrateSaved(saved) {
     Array.isArray(settings.team) &&
     settings.team.every(r => typeof r.id === 'string' && r.headcount >= 0 && r.cost >= 0) &&
     Array.isArray(settings.shared) &&
-    settings.shared.every(c => typeof c.id === 'string' && typeof c.name === 'string' && c.cost >= 0 && c.driver in sharedDrivers) &&
+    settings.shared.every(
+      c => typeof c.id === 'string' && typeof c.name === 'string' && c.cost >= 0 && c.driver in sharedDrivers,
+    ) &&
     [2, 3, 5, 10].includes(settings.years) &&
     settings.rate >= 0 &&
     settings.rate <= 80;
