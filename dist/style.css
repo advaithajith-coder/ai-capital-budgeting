@@ -1391,3 +1391,19 @@ input.mini.wide {
   overflow: visible;
   line-height: 1.25;
 }
+.shared-table input.mini.name {
+  width: 240px;
+}
+select.mini {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 12px;
+  background: #fff;
+  color: var(--ink);
+  max-width: 280px;
+}
+#view table .name-button small {
+  display: block;
+  margin-top: 2px;
+}

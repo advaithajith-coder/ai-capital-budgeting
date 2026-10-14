@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaults, examples, calculate, paybackMonths } from '../dist/model.js';
-import { freshState, migrateSaved, aggregate, roleUsage, moveTeam } from '../dist/portfolio.js';
+import { defaults, examples, calculate, paybackMonths, sharedAllocation } from '../dist/model.js';
+import { freshState, migrateSaved, aggregate, roleUsage, moveTeam, withShares } from '../dist/portfolio.js';
 import { wizardBlank, buildProject } from '../dist/wizard.js';
 
 // A save from before the readiness, team and probability fields existed.
@@ -12,7 +12,7 @@ const oldSave = () => {
   });
   projects[0].direct = 1111111;
   projects.push({ ...structuredClone(projects[2]), id: 'custom', name: 'Custom case' });
-  const { team, teamCost, riskHigh, ...settings } = structuredClone(defaults);
+  const { team, teamCost, riskHigh, shared, sharedCost, ...settings } = structuredClone(defaults);
   return { projects, settings, excluded: ['demand'], scenario: 'base', view: 'team' };
 };
 
@@ -26,6 +26,7 @@ test('Older saves keep their edits and gain the new fields', () => {
   assert.deepEqual(custom.alloc, { ml: 0, data: 0, sw: 0, ops: 0 });
   assert.equal(custom.probReason, '');
   assert.equal(s.settings.team.length, 4);
+  assert.equal(s.settings.shared.length, 5);
   assert.equal(s.view, 'overview');
   assert.deepEqual(s.excluded, ['demand']);
   for (const p of s.projects) assert.ok(Number.isFinite(calculate(p, s.settings).riskAdjustedNPV));
@@ -57,7 +58,8 @@ test('Invalid saves are rejected rather than half loaded', () => {
 test('Portfolio totals sum included projects and share the project payback rule', () => {
   const st = freshState(),
     a = aggregate(st.projects, ['demand'], st.settings),
-    included = st.projects.filter(p => p.id !== 'demand').map(p => calculate(p, st.settings));
+    ss = withShares(st.projects, st.settings),
+    included = st.projects.filter(p => p.id !== 'demand').map(p => calculate(p, ss));
   assert.equal(a.all.length, 4);
   assert.ok(Math.abs(a.npv - included.reduce((v, r) => v + r.npv, 0)) < 1e-6);
   assert.ok(Math.abs(a.rnpv - included.reduce((v, r) => v + r.riskAdjustedNPV, 0)) < 1e-6);
@@ -106,4 +108,41 @@ test('Questionnaire builds a complete project and assigns only free people', () 
   const r = calculate(p, st.settings);
   assert.equal(r.team.stalled, true);
   assert.ok(Number.isFinite(r.npv));
+});
+
+test('Each shared IT category is split in full by its own basis', () => {
+  const st = freshState(),
+    al = sharedAllocation(st.projects, st.settings),
+    sum = id => st.projects.reduce((v, p) => v + al.byProject[p.id].byCategory[id], 0);
+  for (const c of st.settings.shared) assert.ok(Math.abs(sum(c.id) - c.cost) < 1e-6, c.id);
+  const by = id => al.byProject[id].byCategory;
+  // Data platform follows data engineers: vision and invoice have none assigned.
+  assert.equal(by('vision').dataplat, 0);
+  assert.ok(Math.abs(by('demand').dataplat - 150000 * 2 / 5) < 1e-6);
+  // Security follows data sensitivity: Personal (3) is three times Internal (1).
+  assert.ok(Math.abs(by('support').security - 3 * by('vision').security) < 1e-6);
+  // MLOps is equal across live projects; ideas pay nothing.
+  const idea = { ...structuredClone(examples[2]), id: 'idea', stage: 'Idea' },
+    withIdea = sharedAllocation([...st.projects, idea], st.settings);
+  assert.equal(withIdea.byProject.idea.byCategory.mlops, 0);
+  assert.ok(Math.abs(withIdea.byProject.vision.byCategory.mlops - 90000 / 5) < 1e-6);
+});
+test('A category with no basis anywhere stays unallocated', () => {
+  const st = freshState(),
+    noData = st.projects.map(p => ({ ...p, alloc: { ...p.alloc, data: 0 } })),
+    al = sharedAllocation(noData, st.settings);
+  assert.equal(al.categories.find(c => c.id === 'dataplat').unallocated, 150000);
+  assert.equal(al.byProject.demand.byCategory.dataplat, 0);
+});
+test('Shared IT share is a fixed monthly cost, scaled by the cost multiplier and switchable', () => {
+  const st = freshState(),
+    p = st.projects[0],
+    annual = sharedAllocation(st.projects, st.settings).byProject[p.id].total,
+    on = calculate(p, withShares(st.projects, st.settings)),
+    off = calculate(p, withShares(st.projects, { ...st.settings, sharedCost: false })),
+    up = calculate(p, withShares(st.projects, { ...st.settings, costFactor: 120 }));
+  assert.ok(Math.abs(on.flows[1] - (off.flows[1] - annual / 12)) < 1e-6);
+  assert.ok(Math.abs(on.shared.totalCost - annual * st.settings.years) < 1e-6);
+  assert.equal(off.shared.totalCost, 0);
+  assert.ok(Math.abs(up.shared.annual - annual * 1.2) < 1e-6);
 });

@@ -12,6 +12,7 @@ Five editable illustrative projects use the reference's AI value, evidence and h
 
 - **One consistent business case for every project.** NPV, payback, ROI and IRR all come from the same monthly cash model, discount rate and horizon, so a $200K copilot and a $1.5M platform can be compared fairly.
 - **Know what you are committing.** Year-1 funding request (setup + first-year running costs), a funding plan by year, and total cost of ownership, kept separate from the return calculations so nothing is counted twice.
+- **Fully loaded costs, counted once.** Shared IT costs are split by category and department into each business case, and each category is counted once in portfolio totals.
 - **Inflated claims are filtered out.** Recovered hours are kept apart from real cash savings, only the cash share of indirect gains counts, and full running costs (compute, maintenance, oversight, internal team) are always included.
 - **Risk is priced in.** Each project has its own probability of success, based on stage, delivery risks, sponsor engagement and missing approvals. Risk-adjusted NPV counts failure as losing the capital plus delivery spend. Overrides need a written reason.
 - **Forecast vs evidence.** Evidence-adjusted NPV scales estimated benefits by the progress actually measured on each project's business KPI, so you can see how much of the forecast is backed by results.
@@ -26,6 +27,7 @@ Five editable illustrative projects use the reference's AI value, evidence and h
 - **Compute cost control.** Compute vs approved budget is a health signal, with the overrun's cost over the horizon.
 - **Delivery readiness and compliance.** Data readiness, integration, vendor dependency and team capacity (set from actual staffing), plus security, legal and privacy, and model-risk approvals. A pilot or production project missing a required approval is flagged for intervention.
 - **Operational health.** Adoption, data pipeline, model accuracy and trend, sponsor engagement, team staffing and compute, with escalation rules.
+- **Shared IT costs charged fairly.** Platforms and tools are grouped into categories (AI platform & model APIs, data platform, MLOps & monitoring, security tooling, licences), each split by a basis that fits it and shown by department, so reuse and chargeback are visible.
 - **A shared language with finance.** Technical risks feed the same probability, cost and timing that finance uses, so engineering trade-offs show up as dollars and months.
 
 ## Adding a project: the questionnaire
@@ -61,11 +63,15 @@ Required fields are checked before moving on, unknowns can be left blank and are
 
 ![Tech team allocation](docs/screenshots/tech-team.png)
 
+**Shared IT costs**: platform and tooling costs grouped into categories, each split by its own basis (compute spend, data engineers, live projects, data sensitivity, people or equal), then totalled by department and charged to each project.
+
+![Shared IT costs split by department](docs/screenshots/shared-it.png)
+
 **Evidence & health**: forecast vs evidence-adjusted value, then per-project health, probability of success, readiness, compliance and unit cost.
 
 ![Evidence and health](docs/screenshots/evidence.png)
 
-Screenshots show the illustrative example portfolio with internal team cost included, which is why several projects and the portfolio are negative. Switching team cost off on the Tech team page shows the external-cost-only view.
+Screenshots show the illustrative example portfolio with internal team cost and shared IT costs included, which is why several projects and the portfolio are negative. Both charges can be switched off (Tech team and Shared IT costs pages) to see the external-cost-only view.
 
 ## Run it
 

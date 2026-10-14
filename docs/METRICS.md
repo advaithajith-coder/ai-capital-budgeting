@@ -77,3 +77,10 @@ Vision QC, demand forecasting and predictive maintenance draw names and selected
 - Ideas: Validate when NPV is positive (measure a baseline, plan a pilot), otherwise Rework. Evidence and approval rules apply from the pilot stage.
 - Cautions are shown beside the recommendation without changing it: positive NPV but non-positive risk-adjusted NPV; positive NPV that measured KPI progress does not yet support.
 - KPI progress needs at least one month since launch; with no observation period the forecast is used.
+
+## Shared IT costs
+
+- Categories (default: AI platform & model APIs $180K, data platform $150K, MLOps & monitoring $90K, security & compliance tooling $70K, licences & developer tools $60K per year; illustrative) each carry an annual cost and an allocation basis.
+- Bases use inputs only, so allocation never depends on its own results: compute spend (fixed compute + unit cost × volume × adoption), data engineers assigned, tech team assigned, live projects (pilot or production), data sensitivity (Personal 3, Confidential 2, Internal 1, Public 0), or equal.
+- Project share = category cost × project basis ÷ sum of all projects' bases, over all projects including excluded ones; department share = sum of its projects' shares. A category with zero basis everywhere stays unallocated.
+- The share is a fixed monthly running cost from month 1, scaled by the cost multiplier and switchable. Portfolio totals include only included projects' shares; excluded and unallocated amounts are reported on the Shared IT costs page so each category is counted once.

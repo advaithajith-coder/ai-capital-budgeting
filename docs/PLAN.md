@@ -10,6 +10,7 @@
 - Base/downside/upside cases, interactive benefit, cost and delay controls, and a project or portfolio scope selector with scenario comparison.
 - Break-even ("what has to be true"), two-variable sensitivity matrix and one-at-a-time sensitivity outputs.
 - Project-specific probability of success from stage, delivery risks, sponsor engagement and missing approvals; risk-adjusted NPV.
+- Shared IT costs by category with an allocation basis per category, split by department and charged to each project.
 - Shared tech team by role: allocation, bench, moves, staffing-driven delivery time and cost, and a year-1 cost reconciliation.
 - Evidence and health: adoption, data pipeline, sponsor, accuracy, team staffing and compute vs budget; KPI progress and evidence-adjusted NPV; readiness and compliance scorecard.
 - Cash-flow audit with two explicit ROI bases, discounted payback and reference ratio payback.
@@ -22,7 +23,7 @@ Create tenant accounts and permissions. Add company-specific currency, fiscal ca
 
 ## Phase 3 Stronger capital allocation
 
-Add working capital, tax, depreciation, terminal value and recurring replacement spend. Extend usage-driven inference costs to tokens per request × model unit price, and add human review rates and exception handling. Add project dependencies, duplicate-benefit checks, shared infrastructure allocation and constrained investment budgets with ranking. Exit criterion: portfolio decisions remain traceable to a reconciled benefit/cost ledger and auditable cash schedule.
+Add working capital, tax, depreciation, terminal value and recurring replacement spend. Extend usage-driven inference costs to tokens per request × model unit price, and add human review rates and exception handling. Add project dependencies, duplicate-benefit checks, one-time platform investment with reuse economics, and constrained investment budgets with ranking. Exit criterion: portfolio decisions remain traceable to a reconciled benefit/cost ledger and auditable cash schedule.
 
 ## Phase 4 Connected decision assistance
 

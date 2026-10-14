@@ -1,5 +1,15 @@
 // Portfolio state logic with no DOM access: saved-state migration, aggregation and team moves.
-import { defaults, projectDefaults, examples, calculate, irr, breakEven, paybackMonths } from './model.js';
+import {
+  defaults,
+  projectDefaults,
+  examples,
+  calculate,
+  irr,
+  breakEven,
+  paybackMonths,
+  sharedAllocation,
+  sharedDrivers,
+} from './model.js';
 
 export const scenarioPresets = {
   base: { benefitFactor: 100, costFactor: 100, delay: 0 },
@@ -34,13 +44,20 @@ export function migrateSaved(saved) {
     Object.keys(defaults).every(k => typeof settings[k] === typeof defaults[k]) &&
     Array.isArray(settings.team) &&
     settings.team.every(r => typeof r.id === 'string' && r.headcount >= 0 && r.cost >= 0) &&
+    Array.isArray(settings.shared) &&
+    settings.shared.every(c => typeof c.id === 'string' && typeof c.name === 'string' && c.cost >= 0 && c.driver in sharedDrivers) &&
     [2, 3, 5, 10].includes(settings.years) &&
     settings.rate >= 0 &&
     settings.rate <= 80;
   return valid ? { ...freshState(), ...saved, projects, settings, view: 'overview' } : null;
 }
 
-export const results = (projects, s) => projects.map((p, i) => ({ p, i, r: calculate(p, s) }));
+// Settings carrying each project's share of shared IT costs, allocated across every project (included or not).
+export const withShares = (projects, s) => ({ ...s, sharedShares: sharedAllocation(projects, s).byProject });
+export const results = (projects, s) => {
+  const ss = withShares(projects, s);
+  return projects.map((p, i) => ({ p, i, r: calculate(p, ss) }));
+};
 
 // Portfolio totals over included projects. Monthly flows are summed before IRR and payback.
 export function aggregate(projects, excluded, s) {

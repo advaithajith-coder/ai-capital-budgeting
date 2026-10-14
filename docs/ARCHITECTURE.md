@@ -34,12 +34,13 @@ Portfolio settings include effective annual discount rate, investment horizon, b
 
 1. Build project cash schedule from assumptions, never from rounded display values.
 2. Compute initial investment and full annual operating expenses.
-3. Derive staffing coverage from the shared team; scale project delay and ramp by it, and charge build then run team cost.
-4. Apply indirect cash share and optional capacity proxy, adoption, delays, ramp, usage-based costs and scenario factors.
-5. Grow costs and benefits at annual boundaries and calculate monthly cash flows.
-6. Calculate NPV, annualized IRR, payback at final recovery of cumulative cash, discounted payback, horizon ROI, capital ROI, Year-1 funding, break-even, unit economics, compute overrun cost, and risk- and evidence-adjusted NPV.
-7. Aggregate included monthly flows before portfolio IRR/payback, using the same payback rule; do not average project IRRs.
-8. Derive transparent health signals, readiness, compliance, recommendation and cautions separately.
+3. Allocate shared IT categories across all projects by each category's basis; each share is a fixed monthly cost.
+4. Derive staffing coverage from the shared team; scale project delay and ramp by it, and charge build then run team cost.
+5. Apply indirect cash share and optional capacity proxy, adoption, delays, ramp, usage-based costs and scenario factors.
+6. Grow costs and benefits at annual boundaries and calculate monthly cash flows.
+7. Calculate NPV, annualized IRR, payback at final recovery of cumulative cash, discounted payback, horizon ROI, capital ROI, Year-1 funding, break-even, unit economics, compute overrun cost, and risk- and evidence-adjusted NPV.
+8. Aggregate included monthly flows before portfolio IRR/payback, using the same payback rule; do not average project IRRs.
+9. Derive transparent health signals, readiness, compliance, recommendation and cautions separately.
 
 ## Persistence and security
 

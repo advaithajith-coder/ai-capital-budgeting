@@ -17,6 +17,15 @@ export const defaults = {
   sponsorMissing: 0.75,
   // Shared internal tech team. Loaded annual cost per person; headcount totals 25.
   teamCost: true,
+  // Shared IT costs: annual cost per category, split across projects by the category's basis.
+  sharedCost: true,
+  shared: [
+    { id: 'ai', name: 'AI platform & model APIs', cost: 180000, driver: 'compute' },
+    { id: 'dataplat', name: 'Data platform', cost: 150000, driver: 'data' },
+    { id: 'mlops', name: 'MLOps & monitoring', cost: 90000, driver: 'live' },
+    { id: 'security', name: 'Security & compliance tooling', cost: 70000, driver: 'sensitivity' },
+    { id: 'tools', name: 'Licences & developer tools', cost: 60000, driver: 'people' },
+  ],
   team: [
     { id: 'ml', name: 'ML engineers', headcount: 8, cost: 180000 },
     { id: 'data', name: 'Data engineers', headcount: 7, cost: 160000 },
@@ -333,6 +342,39 @@ export const examples = [
   },
 ].map(e => ({ ...structuredClone(projectDefaults), ...e }));
 export const setup = p => p.upfront + p.data + p.training;
+// Allocation bases for shared IT categories. Each returns a project's weight, from inputs only
+// (never from calculated results), so allocation cannot depend on itself.
+export const sharedDrivers = {
+  compute: {
+    label: 'Compute spend',
+    value: p => (p.compute || 0) + ((p.unitCost || 0) * (p.volume || 0) * (p.adoption || 0)) / 100,
+  },
+  data: { label: 'Data engineers assigned', value: p => p.alloc?.data || 0 },
+  people: { label: 'Tech team assigned', value: p => Object.values(p.alloc || {}).reduce((v, n) => v + n, 0) },
+  live: { label: 'Live projects (pilot or production)', value: p => (p.stage === 'Idea' ? 0 : 1) },
+  sensitivity: {
+    label: 'Data sensitivity (weighted)',
+    value: p => ({ Personal: 3, Confidential: 2, Internal: 1, Public: 0 })[p.dataSensitivity] ?? 1,
+  },
+  equal: { label: 'Equal per project', value: () => 1 },
+};
+// Splits each shared category's annual cost across all projects by its basis. A category whose
+// basis is zero for every project stays unallocated rather than being spread arbitrarily.
+export function sharedAllocation(projects, s = defaults) {
+  const byProject = Object.fromEntries(projects.map(p => [p.id, { total: 0, byCategory: {} }]));
+  const categories = (s.shared || []).map(c => {
+    const driver = sharedDrivers[c.driver] || sharedDrivers.equal,
+      weights = projects.map(p => Math.max(0, driver.value(p) || 0)),
+      sum = weights.reduce((v, w) => v + w, 0);
+    projects.forEach((p, i) => {
+      const amount = sum > 0 ? (c.cost * weights[i]) / sum : 0;
+      byProject[p.id].byCategory[c.id] = amount;
+      byProject[p.id].total += amount;
+    });
+    return { ...c, unallocated: sum > 0 ? 0 : c.cost };
+  });
+  return { byProject, categories };
+}
 export const operating = p => p.compute + p.storage + p.maintenance + p.oversight;
 // Staffing from the shared team. Coverage is the weakest role's assigned ÷ needed. Time to full benefit
 // stretches by 1 ÷ coverage when short, shrinks by 1 ÷ √coverage (never below half) when over-staffed,
@@ -550,6 +592,8 @@ export function calculate(p, s = defaults) {
     pvFlows = [-cap],
     yearly = [],
     cumulative = [-cap];
+  const share = s.sharedShares?.[p.id] || { total: 0, byCategory: {} },
+    sharedAnnual = share.total;
   const team = staffing(p, s),
     effDelay = team.stalled ? Infinity : p.delay * team.factor,
     effRamp = Math.max(1, team.stalled ? p.ramp : p.ramp * team.factor),
@@ -557,6 +601,7 @@ export function calculate(p, s = defaults) {
   let totalBenefits = 0,
     totalCosts = cap,
     totalTeam = 0,
+    totalShared = 0,
     npv = -cap,
     pvBenefits = 0,
     pvFixed = 0,
@@ -573,9 +618,11 @@ export function calculate(p, s = defaults) {
           ? 0
           : ((((building * team.buildCost + (1 - building) * team.runCost) / 12) * s.costFactor) / 100);
     totalTeam += teamCost;
+    const sharedCost = s.sharedCost === false ? 0 : (sharedAnnual / 12) * (s.costFactor / 100);
+    totalShared += sharedCost;
     const usage = (p.adoption / 100) * ramp * Math.pow(1 + p.growth / 100, yr),
       benefit = (gross / 12) * usage,
-      fixed = (op / 12) * Math.pow(1 + p.costGrowth / 100, yr) + teamCost,
+      fixed = (op / 12) * Math.pow(1 + p.costGrowth / 100, yr) + teamCost + sharedCost,
       variable = ((((p.unitCost || 0) * (p.volume || 0)) / 12) * usage * s.costFactor) / 100,
       cost = fixed + variable,
       net = benefit - cost,
@@ -595,7 +642,8 @@ export function calculate(p, s = defaults) {
     npv += pv;
     totalBenefits += benefit;
     totalCosts += cost;
-    yearly[yr] ??= { year: yr + 1, benefit: 0, cost: 0, net: 0, team: 0 };
+    yearly[yr] ??= { year: yr + 1, benefit: 0, cost: 0, net: 0, team: 0, shared: 0 };
+    yearly[yr].shared += sharedCost;
     yearly[yr].team += teamCost;
     yearly[yr].benefit += benefit;
     yearly[yr].cost += cost;
@@ -605,9 +653,10 @@ export function calculate(p, s = defaults) {
     probability = success.value / 100,
     steadyVolume = ((p.volume || 0) * p.adoption) / 100,
     runTeam = s.teamCost === false ? 0 : (team.runCost * s.costFactor) / 100,
+    runShared = s.sharedCost === false ? 0 : (sharedAnnual * s.costFactor) / 100,
     unitCost =
       steadyVolume > 0
-        ? (op + runTeam + ((p.unitCost || 0) * steadyVolume * s.costFactor) / 100) / steadyVolume
+        ? (op + runTeam + runShared + ((p.unitCost || 0) * steadyVolume * s.costFactor) / 100) / steadyVolume
         : 0,
     unitBenefit = steadyVolume > 0 ? (gross * p.adoption) / 100 / steadyVolume : 0;
   const h = health(p, s),
@@ -662,6 +711,13 @@ export function calculate(p, s = defaults) {
         : null,
     readiness: ready,
     compliance: comply,
+    shared: {
+      annual: runShared,
+      byCategory: Object.fromEntries(
+        Object.entries(share.byCategory).map(([k, v]) => [k, s.sharedCost === false ? 0 : (v * s.costFactor) / 100]),
+      ),
+      totalCost: totalShared,
+    },
     team: {
       ...team,
       totalCost: totalTeam,
