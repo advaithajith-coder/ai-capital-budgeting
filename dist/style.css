@@ -700,18 +700,349 @@ dialog input {
   background: #fff0eb;
   color: #ae6750;
 }
+.method-wrap {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+}
+.method-toc {
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.method-toc a {
+  display: flex;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #5d6a7e;
+  line-height: 1.35;
+}
+.method-toc a span {
+  color: #a3adbb;
+  font-variant-numeric: tabular-nums;
+}
+.method-toc a:hover {
+  background: #fff;
+  color: var(--blue);
+}
 .method {
-  max-width: 900px;
+  max-width: 980px;
+  padding: 30px 34px;
+}
+.method-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+.method-head h2 {
+  font: 700 22px Manrope;
+  letter-spacing: -0.5px;
+  margin: 0 0 8px;
+}
+.method .lead {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #66748a;
+  margin: 0 0 14px;
+  max-width: 720px;
+}
+.method-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: #7b8594;
+  flex-shrink: 0;
+}
+.method-section {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 14px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 20px;
+}
+.method-section:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.method-num {
+  font: 700 12px Manrope;
+  color: var(--blue);
+  padding-top: 3px;
 }
 .method h3 {
-  font: 700 16px Manrope;
-  margin-top: 27px;
+  font: 700 17px Manrope;
+  margin: 0 0 8px;
+}
+.method h4 {
+  font: 700 13px Manrope;
+  margin: 0 0 8px;
 }
 .method p,
 .method li {
   font-size: 12px;
-  line-height: 1.8;
-  color: #718097;
+  line-height: 1.75;
+  color: #66748a;
+}
+.formula {
+  margin: 14px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.formula figcaption {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #8190a5;
+  padding: 12px 16px 0;
+}
+.eq {
+  font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', Cambria, Georgia, serif;
+  font-size: 17px;
+  color: var(--ink);
+  padding: 14px 16px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 4px;
+  line-height: 1.4;
+  overflow-x: auto;
+}
+.eq var {
+  font-style: italic;
+}
+.sym {
+  white-space: nowrap;
+}
+.eq sub,
+.eq sup {
+  font-size: 0.62em;
+  font-style: italic;
+}
+.eq-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+}
+.eq-row + .eq-row {
+  margin-top: 10px;
+}
+.frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  margin: 0 3px;
+  font-size: 0.92em;
+}
+.frac > span {
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+.frac > span:first-child {
+  border-bottom: 1px solid currentColor;
+}
+.bigop {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  margin: 0 2px;
+}
+.bigop > span {
+  font-size: 1.6em;
+  line-height: 1;
+}
+.bigop small {
+  font-size: 0.55em;
+  min-height: 1em;
+}
+.paren {
+  color: #8190a5;
+}
+.cases {
+  display: inline-flex;
+  flex-direction: column;
+  border-left: 2px solid #c5cdd8;
+  padding-left: 10px;
+  margin-left: 4px;
+  gap: 3px;
+  font-size: 0.82em;
+}
+.where {
+  margin: 0;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--line);
+  background: #fafbfc;
+  display: grid;
+  gap: 6px;
+}
+.where > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.where dt {
+  font-family: 'Cambria Math', 'STIX Two Math', Cambria, Georgia, serif;
+  font-size: 13px;
+  color: var(--ink);
+}
+.where dt sub {
+  font-size: 0.7em;
+}
+.where dd {
+  margin: 0;
+  color: #66748a;
+}
+.example {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 16px;
+  border-top: 1px solid #dfe7fb;
+  background: #f3f6fe;
+}
+.example > span {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--blue);
+  white-space: nowrap;
+}
+.method .example p {
+  margin: 0;
+  color: #44516a;
+  font-variant-numeric: tabular-nums;
+}
+.example b {
+  color: var(--ink);
+}
+.value-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+.value-grid > div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #66748a;
+}
+.value-grid b {
+  font: 700 13px Manrope;
+  color: var(--ink);
+}
+.rule-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 6px;
+}
+.rule-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.rule-card p {
+  margin: 10px 0 0;
+}
+.rule-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+.rule-table td {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  color: #4e5b70;
+}
+.rule-table td:last-child {
+  text-align: right;
+  white-space: nowrap;
+  padding-left: 10px;
+}
+.decision {
+  margin: 0;
+  padding-left: 18px;
+}
+.decision li {
+  margin-bottom: 4px;
+}
+.scope-list {
+  margin: 0;
+  padding-left: 18px;
+}
+@media (max-width: 1100px) {
+  .method-wrap {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .method-toc {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .method-toc .eyebrow {
+    width: 100%;
+  }
+  .method-toc a {
+    background: #fff;
+    border: 1px solid var(--line);
+    padding: 5px 9px;
+    font-size: 11px;
+  }
+  .value-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 780px) {
+  .method {
+    padding: 20px 16px;
+  }
+  .method-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .method-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .value-grid,
+  .rule-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .where > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .example {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .eq {
+    font-size: 15px;
+  }
 }
 .health-grid {
   display: grid;

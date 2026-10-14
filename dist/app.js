@@ -263,8 +263,309 @@ function evidence() {
     )
     .join('')}</div>`;
 }
+// Methodology: every formula typeset, with a live worked example from one project.
+const fx = {
+  v: (s, sub) => `<span class="sym"><var>${s}</var>${sub ? `<sub>${sub}</sub>` : ''}</span>`,
+  frac: (n, d) => `<span class="frac"><span>${n}</span><span>${d}</span></span>`,
+  sum: (lo, hi) => `<span class="bigop"><small>${hi}</small><span>Σ</span><small>${lo}</small></span>`,
+  prod: lo => `<span class="bigop"><small>&nbsp;</small><span>Π</span><small>${lo}</small></span>`,
+  sup: (b, e) => `<span class="sym">${b}<sup>${e}</sup></span>`,
+  paren: s => `<span class="paren">(</span>${s}<span class="paren">)</span>`,
+};
+const formula = (title, body, where = [], example = '') =>
+  `<figure class="formula"><figcaption>${title}</figcaption><div class="eq">${body}</div>${
+    where.length
+      ? `<dl class="where">${where.map(([k, d]) => `<div><dt>${k}</dt><dd>${d}</dd></div>`).join('')}</dl>`
+      : ''
+  }${example ? `<div class="example"><span>Worked example</span><p>${example}</p></div>` : ''}</figure>`;
+const methodSections = [
+  ['value', 'Four parts of AI value'],
+  ['cash', 'Monthly cash flow'],
+  ['returns', 'Returns: NPV, IRR, payback, ROI'],
+  ['funding', 'Funding and cost of ownership'],
+  ['risk', 'Probability and risk-adjusted NPV'],
+  ['breakeven', 'Break-even'],
+  ['unit', 'Unit economics'],
+  ['evidence', 'Evidence and compute'],
+  ['shared', 'Shared IT costs'],
+  ['team', 'Shared tech team'],
+  ['rules', 'Readiness, health and recommendation'],
+  ['reference', 'Reference payback'],
+  ['scope', 'Scope and limitations'],
+];
+let methodProject = null;
 function method() {
-  return `<article class="panel method"><div class="eyebrow">MODEL TRANSPARENCY</div><h2>Built for a business case you can defend.</h2><p>The supplied “Measure and demonstrate AI business value” document informs the four-part value framework, stakeholder metrics, baseline evidence, and early warning indicators. Its learning exercises are reference content, not instructions to this application.</p><h3>Four parts of AI value</h3><ul><li><b>Direct savings:</b> expenses reduced or avoided. Do not also count the same labor as recovered capacity.</li><li><b>Indirect gains:</b> retention, quality, revenue, or reduced complaints. Only the explicitly cash-qualified share enters the financial case.</li><li><b>Productivity:</b> hours recovered × loaded hourly rate × realization. Reported separately; included only when the capacity option is enabled.</li><li><b>Full costs:</b> build, data preparation, training, inference compute, storage, maintenance, and human oversight. Include integration and governance spend in the relevant cost fields.</li></ul><h3>Monthly cash flow model</h3><p>Implementation, data preparation, and training are paid at month zero. Operating costs begin in month one, including during rollout delays. Benefits begin after the project delay plus scenario delay and ramp linearly to full production over the entered ramp months. Benefits are multiplied by adoption and the scenario benefit factor. Yearly benefit and cost growth apply at each twelve-month boundary.</p><h3>Capital budgeting conventions</h3><p><b>NPV:</b> − initial capital + Σ monthly net benefit ÷ (1 + annual discount rate)<sup>month/12</sup>. <b>IRR:</b> the monthly rate that makes NPV zero, annualized as (1 + monthly IRR)<sup>12</sup> − 1. N/A means no unique conventional IRR, no positive inflow, or no root within the search bounds. <b>Payback:</b> the month cumulative cash is finally recovered, with linear interpolation; if cash turns negative again later, payback is reported only once it recovers again. Portfolio payback applies the same rule to the summed monthly flows. Discounted payback uses discounted monthly flows. Returns beyond the horizon are shown explicitly.</p><p><b>ROI (total cost basis):</b> (horizon benefits − horizon costs) ÷ horizon costs. <b>Capital ROI:</b> the same net benefit ÷ initial capital. ROI on total cost basis is a headline portfolio and project metric; capital ROI appears in each project's cash-flow view. IRR above 100% is summarized as “>100%” in the portfolio table because small initial capital makes it unstable for ranking; the exact value is in project detail and on hover. The reference's capital deployed convention includes first-year operating costs; the tool labels its initial capital basis separately.</p><h3>Funding, risk and break-even</h3><p><b>Year-1 funding request:</b> initial capital + the first twelve months of scheduled running costs. It is a budgeting figure; it does not change NPV, IRR or payback, which keep one-time costs at month 0 and running costs in the month they occur. <b>Total cost of ownership:</b> initial capital + all running costs over the horizon, undiscounted. <b>Risk-adjusted NPV:</b> probability of success × NPV − (1 − probability) × initial capital. Each project's probability starts from its stage (defaults: Idea 30%, Pilot 60%, Production 90%) and is multiplied by 0.80 for each high delivery risk, 0.90 for each medium risk and, for pilots and production projects, 0.85 for each missing required approval, with a 5% floor; all are editable in the Scenario lab. Not assessed ratings are neutral (× 1) and flagged. A limited sponsor multiplies by 0.90 and a missing sponsor by 0.75. Staffing is deliberately excluded because it already changes cash flows; it does set the Team capacity rating (below 50% staffed High, below 100% Medium, otherwise Low) when a team need is entered. A per-project override applies only with a written reason, and the rule-based value stays visible. A failed project is assumed to stop at its planned full-benefit point, losing its initial capital plus the net running and team costs incurred while it was being delivered (discounted). <b>Break-even:</b> NPV is linear in each driver, so the tool solves it directly. Estimated benefits must reach (initial capital + PV of all running costs) ÷ PV of benefits. Costs can rise by PV of benefits ÷ (initial capital + PV of costs) − 1. Adoption must reach current adoption × (initial capital + PV of fixed costs) ÷ (PV of benefits − PV of usage costs). Each holds every other assumption fixed.</p><h3>Unit economics</h3><p>Usage-based cost = cost per unit × annual volume × adoption × ramp × benefit growth, so it starts with usage and is never charged during a rollout delay. Fixed running costs are unchanged. Steady-state cost per unit = (fixed running costs + usage cost) ÷ (volume × adoption); benefit per unit uses the cash benefit case. The example projects keep their reference compute costs as fixed costs, and their volumes are illustrative.</p><h3>Readiness and compliance</h3><p>Data readiness, integration, vendor dependency and team capacity are rated low, medium or high risk. Two or more high risks → Not ready; one high or two or more medium → At risk; anything unassessed → Incomplete; otherwise Ready. Readiness informs the decision but does not change the recommendation. Security review is always required, legal & privacy review is required for personal data, and model risk review for high-risk AI. A pilot or production project missing a required approval is Blocked and recommended for intervention; an idea is Pending.</p><h3>Reference payback is shown separately</h3><p>The reference uses (implementation + first-year operating costs) ÷ (annual direct savings + productivity − annual operating costs), excluding indirect gains. This simplified ratio is available in project detail. It ignores actual ramp and adoption and counts first-year operating costs in the numerator as well as the annual net benefit denominator. Our primary payback uses the monthly cash schedule. The reference also contains conflicting example payback summaries, so they are not copied as validated outputs.</p><h3>Health signals and decision rules</h3><p>Reference adoption alerts: below 40% after three months → monitor; below 20% after six months → red flag requiring a recovery plan review. Two yellow signals → investigate; two red → escalate. Application policy additionally investigates any single red. Pipeline thresholds (98% watch, below 95% red) are configurable product assumptions represented here as fixed demo policy. Accuracy is yellow when below its project target and flat or declining. Missing sponsor is red; limited engagement is yellow.</p><p>Ideas are recommended to Validate (positive NPV: measure a baseline and plan a pilot) or Rework (NPV ≤ 0). For pilots and production projects: intervene when evidence is incomplete, required approvals are missing, or health requires investigation/escalation; otherwise rework when NPV ≤ 0, scale a production investment with ≥ 80% adoption and positive NPV, or continue. Two cautions are shown beside the recommendation without changing it: a positive NPV that turns negative once the chance of failure is priced in, and a positive NPV that measured KPI progress does not yet support. These deterministic recommendations support human judgment. They are not autonomous funding decisions.</p><h3>Evidence and compute links</h3><p><b>KPI progress</b> = improvement achieved ÷ improvement targeted, from the baseline to the latest observed value, capped at 100% and floored at 0%. It needs a launched project, a baseline that is not missing, and a target that improves on the baseline; a partial baseline is marked provisional. <b>Evidence-adjusted NPV</b> = NPV − (1 − progress) × PV of estimated benefits, i.e. benefits scaled to measured progress. It assumes cash benefit moves in proportion to the KPI, is shown beside the forecast and never replaces it. <b>Compute vs budget</b> adds a health signal (more than 10% over yellow, more than 25% red) and reports the present value of the overrun over the horizon, the NPV that would be recovered by returning to budget.</p><h3>Shared IT costs</h3><p>Platforms and tools used by several projects are grouped into categories, each with an annual cost and an allocation basis: compute spend (fixed compute plus usage cost at steady adoption), data engineers assigned, tech team assigned, live projects (pilot or production; ideas pay nothing), data sensitivity (Personal 3, Confidential 2, Internal 1, Public 0) or equal per project. Each category is split across all projects in proportion to their basis; department totals are the sum of their projects' shares. A category whose basis is zero for every project stays unallocated. Bases use inputs only, so allocation never depends on its own results. A project's share is a fixed running cost from month 1, scaled by the cost multiplier, and flows into NPV, payback, Year-1 funding, break-even and unit economics. Excluded projects keep their share, which is reported outside portfolio totals, so each category is counted once. Charging can be switched off to compare standalone business cases. Category costs are illustrative.</p><h3>Shared tech team</h3><p>The tech team is a shared pool by role (default 25 people: 8 ML engineers, 7 data engineers, 6 software engineers, 4 MLOps & platform), each with an editable loaded annual cost. Every project states the people it needs by role to build and the full-time equivalents needed to run it. <b>Coverage</b> is assigned ÷ needed for the most short-staffed role. Time to full benefit (project delay and ramp; scenario delay is unchanged) is multiplied by 1 ÷ coverage when short, by 1 ÷ √coverage when every role is over-staffed (never less than half), and becomes never when a needed role has nobody. <b>Team cost</b> is charged monthly: the full assigned team until benefits reach full ramp, then the run-support share (run FTE ÷ assigned, capped at all assigned). It counts as a fixed running cost, so it flows into NPV, payback, Year-1 funding, break-even and unit economics. Example cost fields are treated as external and vendor costs, so internal people are not counted twice. Bench people and people left assigned after a build are not charged to projects; the Tech team page reports them separately so the whole team cost is visible. The charge can be switched off to compare; staffing delays still apply. Health adds a team staffing signal: build coverage, or run coverage once in production (below 50% red, below 100% yellow).</p><h3>Scope and limitations</h3><p>USD, nominal, before-tax estimates. No depreciation tax shield, working capital, terminal value, financing, shared infrastructure savings, project dependencies, or budget optimization. Portfolio totals assume additive, independent benefits and costs; check overlap before approval. Data is saved only in this browser. There is no company login, shared database, or live telemetry connection. Export captures assumptions and monthly results for review.</p></article>`;
+  const st = state.settings,
+    p = state.projects.find(x => x.id === methodProject) || state.projects[0];
+  const { v, frac, sum, prod, sup, paren } = fx,
+    sec = (id, i, title, lead, body) =>
+      `<section class="method-section" id="m-${id}"><div class="method-num">${String(i).padStart(2, '0')}</div><div><h3>${title}</h3>${lead ? `<p class="lead">${lead}</p>` : ''}${body}</div></section>`;
+  const r = p ? calc(p) : null,
+    ex = fn => (r ? fn(r) : ''),
+    usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }),
+    m = v => esc(usd.format(v)),
+    pc = v => esc(pct(v)),
+    name = p ? `<b>${esc(p.name)}</b>: ` : '',
+    horizon = st.years * 12;
+  const picker = state.projects.length
+    ? `<label class="method-pick">Worked examples use <select id="method-project" class="mini select" aria-label="Project used for worked examples">${state.projects
+        .map(x => `<option value="${esc(x.id)}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)}</option>`)
+        .join('')}</select></label>`
+    : '<p class="lead">Add a project to see worked examples.</p>';
+  const body = [
+    sec(
+      'value',
+      1,
+      'Four parts of AI value',
+      'Value is split into four parts so cash, proxies and costs are never mixed. The supplied “Measure and demonstrate AI business value” document informs this framework, the stakeholder metrics, baseline evidence and early warning indicators. Its learning exercises are reference content, not instructions to this application.',
+      `<div class="value-grid"><div><b>Direct savings</b><span>Expenses reduced or avoided. Never also count the same labor as recovered capacity.</span></div><div><b>Indirect gains</b><span>Retention, quality, revenue or fewer complaints. Only the cash-qualified share enters cash flows.</span></div><div><b>Productivity</b><span>Recovered capacity. Reported separately and off by default; it enters cash only when the capacity option is on.</span></div><div><b>Full costs</b><span>Build, data preparation, training, compute, storage, maintenance, oversight, internal team and shared IT.</span></div></div>
+${formula(
+  'Annual gross benefit',
+  `${v('Gross')} = ${paren(`${v('Direct')} + ${v('Indirect')} × ${v('s', 'cash')} + [${v('Capacity')}]`)} × ${v('k', 'benefit')}`,
+  [
+    [v('s', 'cash'), 'Cash-qualified share of indirect gains'],
+    [`[${v('Capacity')}]`, `Included only when the capacity option is on (currently <b>${st.capacity ? 'on' : 'off'}</b>)`],
+    [v('k', 'benefit'), `Scenario benefit multiplier (currently ${st.benefitFactor}%)`],
+  ],
+  ex(r => `${name}(${m(p.direct)} + ${m(p.indirect)} × ${p.indirectCash}%${st.capacity ? ` + ${m(r.capacity)}` : ''}) × ${st.benefitFactor}% = <b>${m(r.gross)}</b> a year at full adoption.`),
+)}
+${formula(
+  'Recovered capacity (productivity proxy)',
+  `${v('Capacity')} = ${v('Hours')} × ${v('Rate', 'loaded')} × ${v('Realization')}`,
+  [[v('Realization'), 'Share of recovered hours that is actually redeployed']],
+  ex(r => `${name}${p.hours.toLocaleString('en-US')} h × ${m(p.hourly)} × ${p.realization}% = <b>${m(r.capacity)}</b> a year, ${st.capacity ? 'included in cash' : 'reported, not counted as cash'}.`),
+)}`,
+    ),
+    sec(
+      'cash',
+      2,
+      'Monthly cash flow',
+      `Cash flows are monthly and end-of-period over a ${st.years}-year horizon (${horizon} months). Initial build, data preparation and training are paid at month 0. Operating costs start in month 1, even during a rollout delay. Adoption, ramp and growth are each applied once.`,
+      `${formula(
+        'Usage factor',
+        `${v('U', 'm')} = ${v('a')} × ${v('Ramp', 'm')} × ${sup(paren(`1 + ${v('g', 'b')}`), `⌊(${v('m')}−1)/12⌋`)} &nbsp;&nbsp; ${v('Ramp', 'm')} = min${paren(`1, max${paren(`0, ${frac(`${v('m')} − ${v('D')}`, v('R'))}`)}`)}`,
+        [
+          [v('a'), 'Adoption'],
+          [v('D'), 'Months before benefits start: project delay × staffing factor + scenario delay'],
+          [v('R'), 'Ramp months × staffing factor (at least 1)'],
+          [v('g', 'b'), 'Annual benefit growth, applied at each 12-month boundary'],
+        ],
+        ex(r => `${name}full benefit is reached after <b>${esc(months(r.team.monthsToFull))}</b>, with adoption ${p.adoption}%.`),
+      )}
+${formula(
+  'Net cash flow in month m',
+  `${v('Net', 'm')} = ${frac(v('Gross'), '12')}${v('U', 'm')} − ${frac(v('Op'), '12')}${sup(paren(`1 + ${v('g', 'c')}`), v('y'))} − ${v('Team', 'm')} − ${v('Shared', 'm')} − ${frac(`${v('c', 'unit')} × ${v('V')}`, '12')}${v('U', 'm')}`,
+  [
+    [v('Net', '0'), '− Initial capital = −(build + data preparation + training)'],
+    [v('Op'), 'Annual compute, storage, maintenance and oversight (treated as external costs)'],
+    [v('g', 'c'), `Annual operating cost growth; ${v('y')} = completed years`],
+    [`${v('c', 'unit')} × ${v('V')}`, 'Usage cost: cost per unit × annual volume, so it scales with usage and is never charged during a delay'],
+  ],
+  `All costs are scaled by the scenario cost multiplier (currently ${st.costFactor}%).${ex(r => ` ${name}initial capital ${m(r.cap)}, annual operating costs ${m(r.op)}.`)}`,
+)}`,
+    ),
+    sec(
+      'returns',
+      3,
+      'Returns: NPV, IRR, payback, ROI',
+      'The annual discount rate is effective, so each month is discounted at the twelfth root. IRR and payback return “N/A” or “Beyond horizon” rather than a misleading zero.',
+      `${formula(
+        'Net present value',
+        `${v('NPV')} = ${sum(`${v('m')}=0`, v('N'))} ${frac(v('Net', 'm'), sup(paren(`1 + ${v('r')}`), `${v('m')}/12`))}`,
+        [
+          [v('r'), `Annual effective discount rate (currently ${st.rate}%)`],
+          [v('N'), `Horizon in months (currently ${horizon})`],
+        ],
+        ex(r => `${name}−${m(r.cap)} + ${m(r.npv + r.cap)} PV of monthly net cash = <b>${m(r.npv)}</b>.`),
+      )}
+${formula(
+  'Internal rate of return',
+  `${sum(`${v('m')}=0`, v('N'))} ${frac(v('Net', 'm'), sup(paren(`1 + ${v('i')}`), v('m')))} = 0 &nbsp;⇒&nbsp; ${v('IRR')} = ${sup(paren(`1 + ${v('i')}`), '12')} − 1`,
+  [
+    [v('i'), 'Monthly rate that sets NPV to zero, found by bisection'],
+    ['N/A', 'No positive inflow, more than one sign change (no unique IRR), or no root in bounds'],
+  ],
+  ex(r => `${name}IRR = <b>${pc(r.irr)}</b>. Above 100% the portfolio table shows “>100%”, since a small initial capital makes it unstable for ranking.`),
+)}
+${formula(
+  'Payback',
+  `${v('Payback')} = ${v('k')} − 1 + ${frac(`|${v('C', `${v('k')}−1`)}|`, v('Net', v('k')))}`,
+  [
+    [v('C', 'm'), `Cumulative cash to month m: ${v('Net', '0')} + ${v('Net', '1')} + … + ${v('Net', 'm')}`],
+    [v('k'), 'The month cumulative cash is finally recovered; if it turns negative again later, payback moves to the later recovery'],
+  ],
+  ex(r => `${name}payback <b>${esc(pb(r.payback))}</b>; discounted payback (same rule on discounted flows) <b>${esc(pb(r.discountedPayback))}</b>. The portfolio applies the same rule to its summed monthly flows.`),
+)}
+${formula(
+  'Return on investment (two labelled denominators)',
+  `${v('ROI', 'total cost')} = ${frac(`Σ${v('Benefit')} − Σ${v('Cost')}`, `Σ${v('Cost')}`)} &nbsp;&nbsp;&nbsp; ${v('ROI', 'capital')} = ${frac(`Σ${v('Benefit')} − Σ${v('Cost')}`, v('Initial capital'))}`,
+  [[`Σ${v('Cost')}`, 'Initial capital + all running costs over the horizon, undiscounted']],
+  ex(r => `${name}(${m(r.totalBenefits)} − ${m(r.totalCosts)}) ÷ ${m(r.totalCosts)} = <b>${pc(r.roi)}</b> on total cost; <b>${r.cap ? pc(r.capitalROI) : 'N/A'}</b> on initial capital.`),
+)}`,
+    ),
+    sec(
+      'funding',
+      4,
+      'Funding and cost of ownership',
+      'Budgeting figures only. They do not change NPV, IRR or payback, which keep one-time costs at month 0 and running costs in the month they occur.',
+      `${formula(
+        'Year-1 funding request',
+        `${v('Funding', 'Y1')} = ${v('Initial capital')} + ${sum(`${v('m')}=1`, '12')} ${v('Cost', 'm')}`,
+        [],
+        ex(r => `${name}${m(r.cap)} + ${m(r.yearly[0].cost)} = <b>${m(r.fundingRequest)}</b>.`),
+      )}
+${formula(
+  'Total cost of ownership',
+  `${v('TCO')} = ${v('Initial capital')} + ${sum(`${v('m')}=1`, v('N'))} ${v('Cost', 'm')}`,
+  [],
+  ex(r => `${name}<b>${m(r.totalCosts)}</b> over ${st.years} years, undiscounted.`),
+)}`,
+    ),
+    sec(
+      'risk',
+      5,
+      'Probability and risk-adjusted NPV',
+      'Each risk affects one channel only. Readiness, sponsor and approvals change probability; staffing changes timing and cost, so it stays out of probability. All factors are editable in the Scenario lab.',
+      `${formula(
+        'Probability of success',
+        `${v('P')} = max${paren(`${v('P', 'floor')}, ${v('P', 'stage')} × ${prod(v('f'))} ${v('f')}`)}`,
+        [
+          [v('P', 'stage'), `Idea ${st.probIdea}%, Pilot ${st.probPilot}%, Production ${st.probProduction}%`],
+          [v('f'), `× ${st.riskHigh} per high delivery risk, × ${st.riskMedium} per medium, × ${st.approvalFactor} per missing required approval (pilots and production), × ${st.sponsorLimited} limited sponsor, × ${st.sponsorMissing} missing sponsor. Not assessed = × 1, flagged`],
+          [v('P', 'floor'), `${st.probFloor}%. A per-project override applies only with a written reason; the rule-based value stays visible`],
+        ],
+        ex(r => `${name}${r.success.base}%${r.success.factors.map(f => ` × ${f.factor} <small>(${esc(f.name.toLowerCase())})</small>`).join('')} = <b>${Math.round(r.success.computed * 10) / 10}%</b>${r.success.overridden ? `, overridden to <b>${r.success.value}%</b>` : ''}.`),
+      )}
+${formula(
+  'Risk-adjusted NPV',
+  `${v('NPV', 'risk')} = ${v('P')} × ${v('NPV')} − ${paren(`1 − ${v('P')}`)} × ${v('L', 'fail')} &nbsp;&nbsp; ${v('L', 'fail')} = ${v('Initial capital')} + ${sum(v('m'), '')} ${v('Cost', 'm')}${v('d', 'm')}${v('b', 'm')}`,
+  [
+    [v('L', 'fail'), 'A failed project stops at its planned full-benefit point, losing initial capital plus the discounted costs incurred while it was being delivered'],
+    [v('d', 'm'), 'Discount factor (1 + r)<sup>−m/12</sup>'],
+    [v('b', 'm'), 'Share of month m still in delivery (1 before full benefit, 0 after)'],
+  ],
+  ex(r => `${name}${pc(r.probability)} × ${m(r.npv)} − ${pc(1 - r.probability)} × ${m(r.failureLoss)} = <b>${m(r.riskAdjustedNPV)}</b>.`),
+)}`,
+    ),
+    sec(
+      'breakeven',
+      6,
+      'Break-even',
+      'NPV is linear in each driver, so each threshold is solved directly, holding every other assumption fixed.',
+      `${formula(
+        'Benefits needed, cost headroom and adoption needed',
+        `<span class="eq-row">${v('Benefits', 'needed')} = ${frac(`${v('I')} + ${v('PV', 'fixed')} + ${v('PV', 'usage')}`, v('PV', 'benefit'))}</span><span class="eq-row">${v('Cost headroom')} = ${frac(v('PV', 'benefit'), `${v('I')} + ${v('PV', 'fixed')} + ${v('PV', 'usage')}`)} − 1</span><span class="eq-row">${v('a', 'needed')} = ${v('a')} × ${frac(`${v('I')} + ${v('PV', 'fixed')}`, `${v('PV', 'benefit')} − ${v('PV', 'usage')}`)}</span>`,
+        [
+          [v('I'), 'Initial capital'],
+          [v('PV', 'fixed'), 'PV of fixed running costs, including team and shared IT'],
+          [v('PV', 'usage'), 'PV of usage-based costs, which move with adoption'],
+        ],
+        ex(r => `${name}benefits must reach <b>${r.breakEven.benefits === null ? 'N/A' : pc(r.breakEven.benefits)}</b> of the estimate; costs can rise <b>${r.breakEven.costHeadroom === null ? 'N/A' : pc(r.breakEven.costHeadroom)}</b>; adoption must reach <b>${r.breakEven.adoption === null ? 'N/A' : r.breakEven.adoption > 100 ? 'not reachable' : Math.round(r.breakEven.adoption * 10) / 10 + '%'}</b>.`),
+      )}`,
+    ),
+    sec(
+      'unit',
+      7,
+      'Unit economics',
+      'Steady-state figures at full adoption and ramp. The example projects keep their reference compute costs as fixed costs; their volumes are illustrative.',
+      `${formula(
+        'Cost and benefit per unit',
+        `<span class="eq-row">${v('Cost', 'unit')} = ${frac(`${v('Op')} + ${v('Team', 'run')} + ${v('Shared')} + ${v('c', 'unit')}${v('V')}${v('a')}`, `${v('V')} × ${v('a')}`)}</span><span class="eq-row">${v('Benefit', 'unit')} = ${frac(`${v('Gross')} × ${v('a')}`, `${v('V')} × ${v('a')}`)}</span>`,
+        [[v('V'), 'Annual volume (transactions, documents, calls…)']],
+        ex(r => (r.unit ? `${name}${esc(unitMoney(r.unit.benefit))} benefit − ${esc(unitMoney(r.unit.cost))} cost = <b>${esc(unitMoney(r.unit.net))}</b> net per unit.` : `${name}no volume entered, so unit economics are unavailable.`)),
+      )}`,
+    ),
+    sec(
+      'evidence',
+      8,
+      'Evidence and compute',
+      'Measured results sit beside the forecast and never replace it.',
+      `${formula(
+        'KPI progress',
+        `${v('Progress')} = clamp${paren(`${frac(`${v('KPI', 'latest')} − ${v('KPI', 'baseline')}`, `${v('KPI', 'target')} − ${v('KPI', 'baseline')}`)}, 0, 1`)}`,
+        [['Needs', 'A launched project, a baseline that is not missing, an observation period and a target that improves on the baseline. A partial baseline is marked provisional. Direction is respected for lower-is-better KPIs']],
+        ex(r => `${name}${r.evidence.applicable ? `progress <b>${pc(r.evidence.progress)}</b>${r.evidence.provisional ? ' (provisional)' : ''}` : `not available (${esc(r.evidence.reason.toLowerCase())})`}.`),
+      )}
+${formula(
+  'Evidence-adjusted NPV',
+  `${v('NPV', 'evidence')} = ${v('NPV')} − ${paren(`1 − ${v('Progress')}`)} × ${v('PV', 'benefit')}`,
+  [['Assumes', 'Cash benefit moves in proportion to the KPI']],
+  ex(r => (r.evidence.npv === null ? `${name}not available.` : `${name}${m(r.npv)} − ${pc(1 - r.evidence.progress)} × ${m(r.pvBenefits)} = <b>${m(r.evidence.npv)}</b>.`)),
+)}
+${formula(
+  'Compute overrun',
+  `${v('PV', 'overrun')} = ${sum(`${v('m')}=1`, v('N'))} ${frac(`max${paren(`0, ${v('Compute')} − ${v('Budget')}`)}`, '12')}${sup(paren(`1 + ${v('g', 'c')}`), v('y'))}${v('d', 'm')}`,
+  [['Signal', 'More than 10% over budget yellow, more than 25% red. The PV is the NPV recovered by returning to budget']],
+  ex(r => `${name}${!(p.computeBudget > 0) ? 'no compute budget entered' : r.compute.pvCost > 0 ? `<b>${m(r.compute.pvCost)}</b> over the horizon` : 'within budget, no overrun'}.`),
+)}`,
+    ),
+    sec(
+      'shared',
+      9,
+      'Shared IT costs',
+      'Platforms and tools used by several projects are grouped into categories, each with an annual cost and its own allocation basis. Bases use inputs only, so allocation never depends on its own results.',
+      `${formula(
+        'Share of a category charged to a project',
+        `${v('Share', 'p,c')} = ${v('Cost', 'c')} × ${frac(v('Basis', 'p,c'), `${sum(v('q'), '')} ${v('Basis', 'q,c')}`)}`,
+        [
+          [v('Basis'), 'Compute spend, data engineers assigned, tech team assigned, live projects (ideas pay nothing), data sensitivity (Personal 3, Confidential 2, Internal 1, Public 0) or equal per project'],
+          ['Charge', `Fixed running cost of ${v('Share')} ÷ 12 per month from month 1, × cost multiplier`],
+          ['Counted once', 'Excluded projects keep their share, reported outside portfolio totals. A category no project uses stays unallocated'],
+        ],
+        ex(r => `${name}${st.sharedCost === false ? 'charging is switched off.' : `<b>${m(r.shared.annual)}</b> a year${st.shared.length ? ' (' + st.shared.map(c => `${esc(c.name)} ${m(r.shared.byCategory[c.id] || 0)}`).join(', ') + ')' : ''}.`}`),
+      )}`,
+    ),
+    sec(
+      'team',
+      10,
+      'Shared tech team',
+      'A shared pool by role, each role with an editable loaded annual cost. Example cost fields are treated as external, so internal people are not counted twice. Bench people are reported on the Tech team page, not charged to projects.',
+      `${formula(
+        'Coverage and timing',
+        `<span class="eq-row">${v('Coverage')} = min<sub>role</sub> ${frac(v('Assigned', 'role'), v('Needed', 'role'))}</span><span class="eq-row">${v('Staffing factor')} = <span class="cases"><span>1 ÷ ${v('Coverage')} &nbsp; if under-staffed</span><span>max${paren(`0.5, 1 ÷ √${v('Coverage')}`)} &nbsp; if over-staffed</span><span>never &nbsp; if a needed role has nobody</span></span></span>`,
+        [['Applies to', 'Project delay and ramp (scenario delay is unchanged)']],
+        ex(r => `${name}${r.team.planned ? `coverage <b>${pc(r.team.coverage)}</b>${r.team.bottleneck ? ` (${esc(r.team.bottleneck)})` : ''}, full benefit at <b>${esc(months(r.team.monthsToFull))}</b> vs ${esc(months(r.team.baseMonthsToFull))} planned.` : 'no team need entered.'}`),
+      )}
+${formula(
+  'Team cost per month',
+  `${v('Team', 'm')} = ${frac(`${v('b', 'm')} × ${v('Build cost')} + ${paren(`1 − ${v('b', 'm')}`)} × ${v('Build cost')} × min${paren(`1, ${frac(v('FTE', 'run'), v('Assigned'))}`)}`, '12')}`,
+  [[v('Build cost'), 'Σ assigned people × loaded annual cost of their role']],
+  ex(r => `${name}${st.teamCost === false ? 'charging is switched off.' : `<b>${m(r.team.totalCost)}</b> over the horizon.`}`),
+)}`,
+    ),
+    sec(
+      'rules',
+      11,
+      'Readiness, health and recommendation',
+      'Deterministic rules that support human judgment. They are not autonomous funding decisions.',
+      `<div class="rule-grid"><div class="rule-card"><h4>Readiness</h4><p>Data readiness, integration, vendor dependency and team capacity are rated low, medium or high risk.</p><table class="rule-table"><tr><td>Two or more high</td><td>${badge('Not ready', 'red')}</td></tr><tr><td>One high, or two or more medium</td><td>${badge('At risk', 'amber')}</td></tr><tr><td>Anything not assessed</td><td>${badge('Incomplete', 'blue')}</td></tr><tr><td>Otherwise</td><td>${badge('Ready', 'green')}</td></tr></table><p>Team capacity: below 50% staffed High, below 100% Medium, otherwise Low. Readiness informs but does not change the recommendation.</p></div>
+<div class="rule-card"><h4>Compliance</h4><table class="rule-table"><tr><td>Security review</td><td>Always required</td></tr><tr><td>Legal &amp; privacy</td><td>Personal data</td></tr><tr><td>Model risk review</td><td>High-risk AI</td></tr></table><p>A pilot or production project missing a required approval is ${badge('Blocked', 'red')} and recommended for intervention; an idea is Pending.</p></div>
+<div class="rule-card"><h4>Health signals</h4><table class="rule-table"><tr><td>Adoption &lt; 40% after 3 months</td><td>${badge('Monitor', 'amber')}</td></tr><tr><td>Adoption &lt; 20% after 6 months</td><td>${badge('Red flag', 'red')}</td></tr><tr><td>Pipeline &lt; 98% · &lt; 95%</td><td>Watch · Red</td></tr><tr><td>Accuracy below target, not improving</td><td>${badge('Yellow', 'amber')}</td></tr><tr><td>Sponsor limited · missing</td><td>Yellow · Red</td></tr><tr><td>Staffing &lt; 100% · &lt; 50%</td><td>Yellow · Red</td></tr></table><p>Two yellow → investigate; any red → investigate; two red → escalate. Pipeline thresholds are fixed demo policy.</p></div>
+<div class="rule-card"><h4>Recommendation</h4><ol class="decision"><li><b>Idea:</b> NPV &gt; 0 → ${badge('Validate', 'blue')} (measure a baseline, plan a pilot); otherwise ${badge('Rework', 'red')}</li><li>Evidence not verified, approval missing, or health says investigate/escalate → ${badge('Intervene', 'amber')}</li><li>NPV ≤ 0 → ${badge('Rework', 'red')}</li><li>Production with adoption ≥ 80% → ${badge('Scale', 'green')}</li><li>Otherwise → ${badge('Continue', 'blue')}</li></ol><p>Two cautions appear beside it without changing it: positive NPV but negative risk-adjusted NPV, and positive NPV that measured KPI progress does not yet support.${ex(r => ` ${name}${recBadge(r.recommendation, r.cautions)}`)}</p></div></div>`,
+    ),
+    sec(
+      'reference',
+      12,
+      'Reference payback is shown separately',
+      'The source reference uses a simplified ratio. It is available in project detail but is not the primary payback, and the reference’s conflicting example payback summaries are not copied as validated outputs.',
+      `${formula(
+        'Reference ratio payback (months)',
+        `${v('Payback', 'ref')} = ${frac(`${v('Implementation')} + ${v('Op', 'year 1')}`, `${v('Direct')} + ${v('Productivity')} − ${v('Op', 'year 1')}`)} × 12`,
+        [['Limits', 'Ignores ramp, adoption and indirect gains, and counts first-year operating costs in both numerator and denominator']],
+        ex(r => `${name}reference ratio <b>${p.direct + r.capacity - operating(p) > 0 ? esc(pb(r.referencePayback)) : 'Not reached'}</b> vs cash-flow payback <b>${esc(pb(r.payback))}</b>.`),
+      )}`,
+    ),
+    sec(
+      'scope',
+      13,
+      'Scope and limitations',
+      '',
+      `<ul class="scope-list"><li>USD, nominal, before-tax estimates.</li><li>No depreciation tax shield, working capital, terminal value, financing, shared infrastructure savings, project dependencies or budget optimization.</li><li>Portfolio totals assume independent, additive benefits and costs; check overlap before approval rather than assuming synergies.</li><li>Data is saved only in this browser. There is no company login, shared database or live telemetry connection.</li><li>The Excel export rebuilds every formula on this page as a live workbook formula.</li></ul>`,
+    ),
+  ].join('');
+  return `<div class="method-wrap"><nav class="method-toc" aria-label="Methodology sections"><div class="eyebrow">ON THIS PAGE</div>${methodSections
+    .map(([id, t], i) => `<a href="#m-${id}" data-method-jump="${id}"><span>${String(i + 1).padStart(2, '0')}</span>${t}</a>`)
+    .join('')}</nav><article class="panel method"><div class="method-head"><div><div class="eyebrow">MODEL TRANSPARENCY</div><h2>Built for a business case you can defend.</h2><p class="lead">Every figure in the workspace comes from the formulas below. Values in the worked examples are live: they use the current scenario, settings and the project you pick.</p></div>${picker}</div>${body}</article></div>`;
 }
 // Shared tech team: thin wrappers over portfolio.js using the current state.
 const roleUsage = () => usageOf(state.projects, state.settings.team);
@@ -419,6 +720,18 @@ function sharedIt() {
     .join('')}</tbody></table></div><div class="table-foot"><span>Bases use inputs only: compute spend, people assigned, stage and data sensitivity. Moving people on the Tech team page changes the data-platform and licence split.</span><span>Annual cost × cost multiplier, charged monthly from month 1.</span></div></div>`;
 }
 function bindView() {
+  $('#method-project')?.addEventListener('change', e => {
+    methodProject = e.target.value;
+    render();
+    $('#method-project').focus();
+  });
+  document.querySelectorAll('[data-method-jump]').forEach(
+    a =>
+      (a.onclick = e => {
+        e.preventDefault();
+        document.getElementById('m-' + a.dataset.methodJump)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      }),
+  );
   document.querySelectorAll('[data-project]').forEach(b => (b.onclick = () => openDetail(b.dataset.project)));
   document.querySelectorAll('[data-include]').forEach(
     b =>
