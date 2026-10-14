@@ -83,15 +83,18 @@ test('People move between bench and projects without exceeding the pool', () => 
     { projects } = st,
     team = st.settings.team,
     ml = () => roleUsage(projects, team).find(r => r.id === 'ml');
-  assert.equal(ml().available, 1);
-  assert.equal(moveTeam(projects, team, 'ml', 'bench', 'maintenance', 5), 1);
+  const free = ml().available,
+    before = projects.find(p => p.id === 'maintenance').alloc.ml;
+  assert.ok(free > 0 && free < 9);
+  assert.equal(moveTeam(projects, team, 'ml', 'bench', 'maintenance', 9), free);
   assert.equal(ml().available, 0);
-  assert.equal(projects.find(p => p.id === 'maintenance').alloc.ml, 2);
+  assert.equal(projects.find(p => p.id === 'maintenance').alloc.ml, before + free);
   assert.equal(moveTeam(projects, team, 'ml', 'bench', 'vision', 1), 0);
   assert.equal(moveTeam(projects, team, 'ml', 'demand', 'vision', 1), 1);
   assert.equal(moveTeam(projects, team, 'ml', 'vision', 'vision', 1), 0);
   assert.equal(moveTeam(projects, team, 'ml', 'nope', 'vision', 1), 0);
-  assert.equal(moveTeam(projects, team, 'ml', 'vision', 'bench', 9), 2);
+  const visionMl = projects.find(p => p.id === 'vision').alloc.ml;
+  assert.equal(moveTeam(projects, team, 'ml', 'vision', 'bench', 9), visionMl);
   assert.equal(ml().assigned + ml().available, ml().headcount);
 });
 
@@ -102,7 +105,8 @@ test('Questionnaire builds a complete project and assigns only free people', () 
     p = { ...buildProject(draft, usage), id: 'new' };
   assert.equal(p.name, 'Contract review');
   assert.deepEqual(p.need, { ml: 2, data: 0, sw: 0, ops: 1 });
-  assert.deepEqual(p.alloc, { ml: 1, data: 0, sw: 0, ops: 0 });
+  const free = Object.fromEntries(usage.map(r => [r.id, Math.max(0, r.available)]));
+  assert.deepEqual(p.alloc, { ml: Math.min(2, free.ml), data: 0, sw: 0, ops: Math.min(1, free.ops) });
   for (const k of Object.keys(examples[0])) if (k !== 'id') assert.equal(typeof p[k], typeof examples[0][k], k);
   assert.ok(migrateSaved({ ...st, projects: [...st.projects, p] }));
   const r = calculate(p, st.settings);
@@ -116,22 +120,24 @@ test('Each shared IT category is split in full by its own basis', () => {
     sum = id => st.projects.reduce((v, p) => v + al.byProject[p.id].byCategory[id], 0);
   for (const c of st.settings.shared) assert.ok(Math.abs(sum(c.id) - c.cost) < 1e-6, c.id);
   const by = id => al.byProject[id].byCategory;
+  const cost = id => st.settings.shared.find(c => c.id === id).cost,
+    dataTotal = st.projects.reduce((v, p) => v + p.alloc.data, 0);
   // Data platform follows data engineers: vision and invoice have none assigned.
   assert.equal(by('vision').dataplat, 0);
-  assert.ok(Math.abs(by('demand').dataplat - 150000 * 2 / 5) < 1e-6);
+  assert.ok(Math.abs(by('demand').dataplat - (cost('dataplat') * st.projects.find(p => p.id === 'demand').alloc.data) / dataTotal) < 1e-6);
   // Security follows data sensitivity: Personal (3) is three times Internal (1).
   assert.ok(Math.abs(by('support').security - 3 * by('vision').security) < 1e-6);
   // MLOps is equal across live projects; ideas pay nothing.
   const idea = { ...structuredClone(examples[2]), id: 'idea', stage: 'Idea' },
     withIdea = sharedAllocation([...st.projects, idea], st.settings);
   assert.equal(withIdea.byProject.idea.byCategory.mlops, 0);
-  assert.ok(Math.abs(withIdea.byProject.vision.byCategory.mlops - 90000 / 5) < 1e-6);
+  assert.ok(Math.abs(withIdea.byProject.vision.byCategory.mlops - cost('mlops') / 5) < 1e-6);
 });
 test('A category with no basis anywhere stays unallocated', () => {
   const st = freshState(),
     noData = st.projects.map(p => ({ ...p, alloc: { ...p.alloc, data: 0 } })),
     al = sharedAllocation(noData, st.settings);
-  assert.equal(al.categories.find(c => c.id === 'dataplat').unallocated, 150000);
+  assert.equal(al.categories.find(c => c.id === 'dataplat').unallocated, st.settings.shared.find(c => c.id === 'dataplat').cost);
   assert.equal(al.byProject.demand.byCategory.dataplat, 0);
 });
 test('Shared IT share is a fixed monthly cost, scaled by the cost multiplier and switchable', () => {

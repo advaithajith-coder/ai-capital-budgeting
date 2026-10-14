@@ -63,7 +63,7 @@ Vision QC, demand forecasting and predictive maintenance draw names and selected
 - **Coverage** = assigned ÷ needed for the weakest role. Time to full benefit (project delay + ramp) × 1 ÷ coverage when short; × max(0.5, 1 ÷ √coverage) when every role is over-staffed; never when a needed role has nobody. Scenario delay is not scaled.
 - **Team cost** is charged monthly as a fixed running cost: the whole assigned team until full ramp, then assigned cost × min(1, run FTE ÷ assigned). It flows into NPV, payback, Year-1 funding, break-even and unit economics, and can be switched off (staffing delays still apply). Example cost fields are treated as external and vendor costs to avoid double counting internal people.
 - The Tech team page reconciles year-1 cost: charged to projects + bench + idle after build = annual cost of the whole team. Health adds a team staffing signal (build coverage, or run coverage once in production; < 50% red, < 100% yellow).
-- Default example allocation leaves 4 people on the bench and Predictive maintenance one ML engineer short, to illustrate the trade-off. Including team cost lowers every example NPV; Customer service and Invoice processing turn negative.
+- Demo calibration (illustrative, not reference data): the examples' implementation budgets already pay for the vendor build, so each has a small internal team (2–4 people) and 0.25 FTE run support (0.5 for Vision, in production), because their own maintenance and oversight fields cover most ongoing support. 14 of the 25 people are assigned; the rest work on other initiatives and are not charged to these projects. Predictive maintenance is one ML engineer short, with ML engineers on the bench, to illustrate the staffing trade-off. Project costs and benefits are unchanged from the reference.
 
 ## Linked indicators
 
@@ -80,7 +80,7 @@ Vision QC, demand forecasting and predictive maintenance draw names and selected
 
 ## Shared IT costs
 
-- Categories (default: AI platform & model APIs $180K, data platform $150K, MLOps & monitoring $90K, security & compliance tooling $70K, licences & developer tools $60K per year; illustrative) each carry an annual cost and an allocation basis.
+- Categories (default: AI platform & model APIs $55K, data platform $45K, MLOps & monitoring $25K, security & compliance tooling $20K, licences & developer tools $15K per year; illustrative) each carry an annual cost and an allocation basis. The defaults are this portfolio's share of company-wide platforms, not the whole platform bill.
 - Bases use inputs only, so allocation never depends on its own results: compute spend (fixed compute + unit cost × volume × adoption), data engineers assigned, tech team assigned, live projects (pilot or production), data sensitivity (Personal 3, Confidential 2, Internal 1, Public 0), or equal.
 - Project share = category cost × project basis ÷ sum of all projects' bases, over all projects including excluded ones; department share = sum of its projects' shares. A category with zero basis everywhere stays unallocated.
 - The share is a fixed monthly running cost from month 1, scaled by the cost multiplier and switchable. Portfolio totals include only included projects' shares; excluded and unallocated amounts are reported on the Shared IT costs page so each category is counted once.

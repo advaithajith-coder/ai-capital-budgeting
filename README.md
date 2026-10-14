@@ -76,7 +76,7 @@ Skipped detail is never guessed: unrated risks stay neutral and are flagged, mis
 
 ![Evidence and health](docs/screenshots/evidence.png)
 
-Screenshots show the illustrative example portfolio with internal team cost and shared IT costs included, which is why several projects and the portfolio are negative. Both charges can be switched off (Tech team and Shared IT costs pages) to see the external-cost-only view.
+Screenshots show the illustrative example portfolio, fully loaded with internal team and shared IT costs: a clear winner (Vision quality control), a smaller win (Invoice processing), a marginal case to rework (Customer service), and two pilots the tool flags for intervention. Both internal charges can be switched off (Tech team and Shared IT costs pages) to compare with the external-cost-only view.
 
 ## Export to Excel
 

@@ -17,14 +17,15 @@ export const defaults = {
   sponsorMissing: 0.75,
   // Shared internal tech team. Loaded annual cost per person; headcount totals 25.
   teamCost: true,
-  // Shared IT costs: annual cost per category, split across projects by the category's basis.
+  // Shared IT costs: this portfolio's annual share of company platforms per category, split across
+  // projects by the category's basis.
   sharedCost: true,
   shared: [
-    { id: 'ai', name: 'AI platform & model APIs', cost: 180000, driver: 'compute' },
-    { id: 'dataplat', name: 'Data platform', cost: 150000, driver: 'data' },
-    { id: 'mlops', name: 'MLOps & monitoring', cost: 90000, driver: 'live' },
-    { id: 'security', name: 'Security & compliance tooling', cost: 70000, driver: 'sensitivity' },
-    { id: 'tools', name: 'Licences & developer tools', cost: 60000, driver: 'people' },
+    { id: 'ai', name: 'AI platform & model APIs', cost: 55000, driver: 'compute' },
+    { id: 'dataplat', name: 'Data platform', cost: 45000, driver: 'data' },
+    { id: 'mlops', name: 'MLOps & monitoring', cost: 25000, driver: 'live' },
+    { id: 'security', name: 'Security & compliance tooling', cost: 20000, driver: 'sensitivity' },
+    { id: 'tools', name: 'Licences & developer tools', cost: 15000, driver: 'people' },
   ],
   team: [
     { id: 'ml', name: 'ML engineers', headcount: 8, cost: 180000 },
@@ -108,7 +109,7 @@ export const examples = [
     modelRiskReview: 'Approved',
     need: { ml: 1, data: 0, sw: 0, ops: 1 },
     alloc: { ml: 1, data: 0, sw: 0, ops: 1 },
-    runNeed: 1.5,
+    runNeed: 0.5,
     evidence:
       'Q3 2025 pilot baseline; sample scenario from reference. Validate full rollout and labor savings before approval.',
   },
@@ -163,9 +164,9 @@ export const examples = [
     securityReview: 'Approved',
     legalReview: 'Approved',
     modelRiskReview: 'In progress',
-    need: { ml: 2, data: 1, sw: 2, ops: 1 },
-    alloc: { ml: 2, data: 1, sw: 2, ops: 1 },
-    runNeed: 1.5,
+    need: { ml: 1, data: 0, sw: 1, ops: 1 },
+    alloc: { ml: 1, data: 0, sw: 1, ops: 1 },
+    runNeed: 0.25,
     evidence:
       'Illustrative example; handle time and satisfaction metrics inspired by the reference. Annual savings need a staffing or avoided hiring plan.',
   },
@@ -222,7 +223,7 @@ export const examples = [
     modelRiskReview: 'Approved',
     need: { ml: 1, data: 0, sw: 1, ops: 0 },
     alloc: { ml: 1, data: 0, sw: 1, ops: 0 },
-    runNeed: 1,
+    runNeed: 0.25,
     evidence:
       'Illustrative finance example. Direct savings represent outsourced processing and late fees; hours recovered are a separate internal team benefit.',
   },
@@ -277,9 +278,9 @@ export const examples = [
     securityReview: 'Approved',
     legalReview: 'In progress',
     modelRiskReview: 'In progress',
-    need: { ml: 2, data: 2, sw: 1, ops: 1 },
-    alloc: { ml: 2, data: 2, sw: 1, ops: 1 },
-    runNeed: 1,
+    need: { ml: 1, data: 1, sw: 0, ops: 1 },
+    alloc: { ml: 1, data: 1, sw: 0, ops: 1 },
+    runNeed: 0.25,
     evidence:
       'Reference identifies no formal prelaunch accuracy baseline. The 61% is a provisional historical proxy; reconcile comparable SKUs, seasonality, and data feed gaps.',
   },
@@ -334,9 +335,9 @@ export const examples = [
     securityReview: 'In progress',
     legalReview: 'Not started',
     modelRiskReview: 'Not started',
-    need: { ml: 2, data: 2, sw: 1, ops: 1 },
-    alloc: { ml: 1, data: 2, sw: 1, ops: 1 },
-    runNeed: 1,
+    need: { ml: 2, data: 1, sw: 1, ops: 1 },
+    alloc: { ml: 1, data: 1, sw: 1, ops: 1 },
+    runNeed: 0.25,
     evidence:
       'Reference: 0 failures in 6 months versus historical 4/year. This does not establish an annual zero-failure rate; validate seasonality and avoided-event attribution.',
   },
