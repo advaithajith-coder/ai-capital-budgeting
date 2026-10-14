@@ -21,6 +21,7 @@ Build and maintain an executive decision workspace for AI automation investments
 - `tests/portfolio.test.mjs`: migration, aggregation, team moves and questionnaire builder.
 - `tests/excel.test.mjs`: workbook structure, formula well-formedness and packaging.
 - `tools/verify-excel.mjs`: Windows + Excel check that exported workbooks reproduce the model, including edits made inside Excel.
+- `tools/audit-workbook.mjs <file>`: Windows + Excel audit of any exported or edited workbook: formula errors, every formula and input against a fresh export of the same inputs, and results against the model.
 - `docs/ARCHITECTURE.md`, `docs/PLAN.md`, `docs/DESIGN.md`, `docs/METRICS.md`: design and implementation authority.
 
 ## Financial requirements

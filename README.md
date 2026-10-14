@@ -91,7 +91,7 @@ Screenshots show the illustrative example portfolio with internal team cost and 
 | P1, P2 … | One sheet per project: the 120-month cash schedule and every derived figure |
 | Portfolio, Scenarios, Health | Summed flows, funding plan, break-even, sensitivity grids, health signals |
 
-The workbook is built in the browser with no external libraries. `node tools/verify-excel.mjs` (Windows with Excel) generates workbooks for several app states, edits inputs inside Excel, and checks that Excel's results match the app's model: currently 1,301 values with no mismatches. JSON export remains available next to the button.
+The workbook is built in the browser with no external libraries. `node tools/verify-excel.mjs` (Windows with Excel) generates workbooks for several app states, edits inputs inside Excel, and checks that Excel's results match the app's model: currently 1,301 values with no mismatches. To check a workbook that has been shared or edited, run `node tools/audit-workbook.mjs path/to/file.xlsx`: it lists formula errors, any formula that was overwritten or changed, and any result that no longer matches the model. JSON export remains available next to the button.
 
 ## Run it
 

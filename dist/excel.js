@@ -47,7 +47,7 @@ const safeName = (i, name) =>
     .trim();
 
 // Project input columns on the Projects sheet: [key, header, format, width, export(p, s), validation]
-function projectColumns(team) {
+export function projectColumns(team) {
   const pct = k => p => (p[k] ?? 0) / 100;
   return [
     ['id', 'ID', 'general', 12, p => p.id],
