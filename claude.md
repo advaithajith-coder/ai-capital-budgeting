@@ -12,11 +12,15 @@ Build and maintain an executive decision workspace for AI automation investments
 - `dist/portfolio.js`: saved-state migration, portfolio aggregation, team usage and moves (no DOM).
 - `dist/wizard.js`: add-automation questionnaire definitions and project builder (no DOM).
 - `dist/format.js`: display formatting and escaping.
+- `dist/xlsx.js`: dependency-free XLSX writer (styles, formulas, defined names, validations, zip).
+- `dist/excel.js`: builds the live-formula Excel workbook from app state; its formulas mirror `model.js`.
 - `dist/app.js`: state, live editing, views, event binding, export.
 - `dist/style.css`: responsive visual system.
 - `dist/index.html`: semantic application shell.
 - `tests/model.test.mjs`: independent numerical and boundary checks.
 - `tests/portfolio.test.mjs`: migration, aggregation, team moves and questionnaire builder.
+- `tests/excel.test.mjs`: workbook structure, formula well-formedness and packaging.
+- `tools/verify-excel.mjs`: Windows + Excel check that exported workbooks reproduce the model, including edits made inside Excel.
 - `docs/ARCHITECTURE.md`, `docs/PLAN.md`, `docs/DESIGN.md`, `docs/METRICS.md`: design and implementation authority.
 
 ## Financial requirements
@@ -27,7 +31,7 @@ Capacity hours are not automatic cash savings. Keep capacity off by default. Ind
 
 ## Product requirements
 
-Retain five example investments, the add-automation questionnaire, duplicate/remove, the shared tech team, funding plan, break-even, risk- and evidence-adjusted NPV, include/exclude, live editing, scenarios, sensitivity, monthly cash audit, baseline evidence, health indicators, rule-based recommendation, JSON export, and browser-local persistence. Use safe text escaping for user-entered content. Validate numeric inputs. Support small screens, keyboard focus, dialogs, clear empty states and unavailable metrics.
+Retain five example investments, the add-automation questionnaire, duplicate/remove, the shared tech team, funding plan, break-even, risk- and evidence-adjusted NPV, include/exclude, live editing, scenarios, sensitivity, monthly cash audit, baseline evidence, health indicators, rule-based recommendation, Excel export with live formulas (JSON export kept), and browser-local persistence. Use safe text escaping for user-entered content. Validate numeric inputs. Support small screens, keyboard focus, dialogs, clear empty states and unavailable metrics.
 
 ## Scope
 
@@ -35,4 +39,4 @@ This is a working browser-local MVP. There is no LLM funding agent, user authent
 
 ## Changes and validation
 
-Run the full suite (`npm test`) for model or portfolio logic changes. When adding a project field, add it to `projectDefaults` so examples and older saves receive it. Verify representative interactions in a browser when available. Hosting is Vercel: `vercel.json` serves `dist/` with no build step. A Vercel production URL is public unless Deployment Protection is enabled, so keep all example data illustrative. Do not persist repository credentials. Source reference includes inconsistent payback summaries; explain and independently calculate instead of reproducing them blindly.
+Run the full suite (`npm test`) for model or portfolio logic changes. When adding a project field, add it to `projectDefaults` so examples and older saves receive it. Any change to a calculation in `model.js` must be mirrored in `excel.js`; run `node tools/verify-excel.mjs` on a machine with Excel and keep it at zero mismatches. Verify representative interactions in a browser when available. Hosting is Vercel: `vercel.json` serves `dist/` with no build step. A Vercel production URL is public unless Deployment Protection is enabled, so keep all example data illustrative. Do not persist repository credentials. Source reference includes inconsistent payback summaries; explain and independently calculate instead of reproducing them blindly.

@@ -78,6 +78,21 @@ Skipped detail is never guessed: unrated risks stay neutral and are flagged, mis
 
 Screenshots show the illustrative example portfolio with internal team cost and shared IT costs included, which is why several projects and the portfolio are negative. Both charges can be switched off (Tech team and Shared IT costs pages) to see the external-cost-only view.
 
+## Export to Excel
+
+**↓ Export portfolio** downloads an Excel workbook of the current portfolio in which every figure is a live formula. Change any blue input in Excel (a project's costs or adoption, the scenario, the hurdle rate, who is assigned to which project, a shared IT category's basis, the probability policy) and the whole workbook recalculates exactly as the app does.
+
+| Sheet | What it holds |
+|---|---|
+| Overview | Portfolio cards and a row per project: NPV, risk- and evidence-adjusted NPV, payback, ROI, IRR, Year-1 funding, probability, health, readiness, compliance, recommendation |
+| Settings | Hurdle rate, horizon, scenario (Base, Downside, Upside or Custom), cost switches, probability policy |
+| Projects | Every input for every project, one row each |
+| Team, Shared IT | Role pools; shared IT categories with the split by project and by department |
+| P1, P2 … | One sheet per project: the 120-month cash schedule and every derived figure |
+| Portfolio, Scenarios, Health | Summed flows, funding plan, break-even, sensitivity grids, health signals |
+
+The workbook is built in the browser with no external libraries. `node tools/verify-excel.mjs` (Windows with Excel) generates workbooks for several app states, edits inputs inside Excel, and checks that Excel's results match the app's model: currently 1,301 values with no mismatches. JSON export remains available next to the button.
+
 ## Run it
 
 Run `npm start` and open http://127.0.0.1:4173. Run `npm test` for the financial and portfolio checks. No install step is needed.

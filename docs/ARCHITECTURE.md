@@ -8,6 +8,8 @@ AI Capital is a browser-local executive portfolio application with a pure determ
 - `dist/portfolio.js`: pure state logic: fresh state, saved-state migration and validation, portfolio aggregation, team usage and moves.
 - `dist/wizard.js`: questionnaire field definitions and the draft → project builder.
 - `dist/format.js`: display formatting and HTML escaping.
+- `dist/xlsx.js`: dependency-free XLSX writer.
+- `dist/excel.js`: live-formula workbook built from app state; its formulas mirror `model.js`.
 - `dist/app.js`: browser state, rendering of all views, event binding and export.
 
 Everything except `app.js` is DOM-free and covered by Node tests.
@@ -56,4 +58,4 @@ An optional language model can draft an executive narrative using a structured, 
 
 ## Verification
 
-Numerical tests use independent annuity values, known monthly schedules, delayed deployment, adoption, capacity exclusions, sensitivity monotonicity, nonconventional IRR, early warning boundaries, break-even round trips, staffing, probability, evidence and compute rules. Portfolio tests cover saved-state migration and validation, aggregation, team moves and the questionnaire builder. Browser verification covers the portfolio, the questionnaire, live edits, scenarios, the tech team page, persistence, evidence and responsive layout.
+Numerical tests use independent annuity values, known monthly schedules, delayed deployment, adoption, capacity exclusions, sensitivity monotonicity, nonconventional IRR, early warning boundaries, break-even round trips, staffing, probability, evidence and compute rules. Portfolio tests cover saved-state migration and validation, aggregation, team moves and the questionnaire builder. Workbook tests cover structure and formula well-formedness; `tools/verify-excel.mjs` opens exported workbooks in Excel, applies input edits there, and compares every result with the model. Browser verification covers the portfolio, the questionnaire, live edits, scenarios, the tech team page, persistence, evidence and responsive layout.

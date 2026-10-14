@@ -84,3 +84,11 @@ Vision QC, demand forecasting and predictive maintenance draw names and selected
 - Bases use inputs only, so allocation never depends on its own results: compute spend (fixed compute + unit cost × volume × adoption), data engineers assigned, tech team assigned, live projects (pilot or production), data sensitivity (Personal 3, Confidential 2, Internal 1, Public 0), or equal.
 - Project share = category cost × project basis ÷ sum of all projects' bases, over all projects including excluded ones; department share = sum of its projects' shares. A category with zero basis everywhere stays unallocated.
 - The share is a fixed monthly running cost from month 1, scaled by the cost multiplier and switchable. Portfolio totals include only included projects' shares; excluded and unallocated amounts are reported on the Shared IT costs page so each category is counted once.
+
+## Excel export
+
+- The workbook reproduces every calculation with formulas: monthly schedules (120 rows; months beyond the horizon are zeroed), staffing, shared IT allocation, probability, evidence, health, readiness, compliance, recommendation and portfolio aggregation.
+- Units: percentages are fractions (adoption 0.75), multipliers are fractions (cost multiplier 1.20), probabilities are fractions; money is in dollars and time in months.
+- IRR uses Excel IRR on the monthly net flows, tried from several starting guesses, annualized as (1 + IRR)^12 − 1, and shown only for conventional flows (one sign change).
+- Payback uses MAXIFS to find the last month in deficit within the horizon, matching the app's final-recovery rule.
+- The benefit × cost grid, benefit and cost one-at-a-time rows and the hurdle-rate rows are exact live formulas (NPV is linear in the multipliers; flows do not depend on the rate). Scenario-preset and rollout-delay comparisons are a snapshot at export because delay changes the schedule; the live alternative is to change the Settings sheet.

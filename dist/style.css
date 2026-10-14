@@ -1458,3 +1458,6 @@ select.mini {
 .add-detail .btn {
   padding: 6px 12px;
 }
+.json-btn {
+  margin: 0 10px 0 14px;
+}

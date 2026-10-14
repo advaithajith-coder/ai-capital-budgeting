@@ -955,7 +955,37 @@ $('#reset').onclick = () => {
   toast('Example portfolio restored');
 };
 $('#add').onclick = openWizard;
-$('#export').onclick = () => {
+const download = (blob, name) => {
+  const url = URL.createObjectURL(blob),
+    a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+const stamp = () => new Date().toISOString().slice(0, 10);
+// Excel workbook with live formulas for the current portfolio; loaded on demand.
+$('#export').onclick = async () => {
+  const button = $('#export');
+  button.disabled = true;
+  button.textContent = 'Preparing workbook…';
+  try {
+    const { exportWorkbook } = await import('./excel.js'),
+      bytes = await exportWorkbook(state);
+    download(
+      new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+      `ai-capital-portfolio-${stamp()}.xlsx`,
+    );
+    toast('Excel workbook exported with live formulas');
+  } catch (err) {
+    console.error(err);
+    toast('Excel export failed; try the JSON export');
+  } finally {
+    button.disabled = false;
+    button.textContent = '↓ Export portfolio';
+  }
+};
+$('#export-json').onclick = () => {
   const payload = {
     exportedAt: new Date().toISOString(),
     currency: 'USD',
@@ -963,12 +993,7 @@ $('#export').onclick = () => {
     results: results().map(({ p, r }) => ({ id: p.id, ...r })),
     portfolio: portfolio(),
   };
-  const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'ai-capital-portfolio.json';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  download(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `ai-capital-portfolio-${stamp()}.json`);
   toast('Assumptions and results exported');
 };
 document.addEventListener('keydown', e => {

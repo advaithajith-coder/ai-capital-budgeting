@@ -14,7 +14,7 @@
 - Shared tech team by role: allocation, bench, moves, staffing-driven delivery time and cost, and a year-1 cost reconciliation.
 - Evidence and health: adoption, data pipeline, sponsor, accuracy, team staffing and compute vs budget; KPI progress and evidence-adjusted NPV; readiness and compliance scorecard.
 - Cash-flow audit with two explicit ROI bases, discounted payback and reference ratio payback.
-- Add, duplicate and remove investments; browser storage with migration of older saves; JSON export.
+- Add, duplicate and remove investments; browser storage with migration of older saves; Excel export with live formulas mirroring the model (JSON export kept).
 - Responsive executive UI, financial and portfolio tests, and architecture/design/metric documentation.
 
 ## Phase 2 Company workflow
