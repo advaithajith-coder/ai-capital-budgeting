@@ -1,14 +1,503 @@
-export const defaults={rate:12,years:5,benefitFactor:100,costFactor:100,delay:0,capacity:false};
-export const examples=[
-{id:'vision',name:'Vision quality control',team:'Operations',owner:'COO',stage:'Production',description:'Detect defects on packaging lines before they reach customers.',upfront:680000,data:0,training:20000,compute:48000,storage:12000,maintenance:95000,oversight:80000,direct:1100000,indirect:120000,indirectCash:100,hours:2736,hourly:95,realization:70,adoption:94,ramp:2,delay:0,growth:3,costGrowth:5,baseline:'Verified',kpi:'Scrap rate',before:3.2,after:2.1,unit:'%',target:2,direction:'lower',pipeline:99.2,sponsor:'Engaged',accuracy:97.3,trend:0.2,accuracyTarget:95,computeBudget:48000,age:8,evidence:'Q3 2025 pilot baseline; sample scenario from reference. Validate full rollout and labor savings before approval.'},
-{id:'support',name:'Customer service copilot',team:'Customer experience',owner:'Chief Customer Officer',stage:'Pilot',description:'Automate routine requests and assist agents with complex cases.',upfront:260000,data:40000,training:30000,compute:72000,storage:18000,maintenance:42000,oversight:60000,direct:420000,indirect:140000,indirectCash:50,hours:7200,hourly:38,realization:55,adoption:76,ramp:4,delay:1,growth:5,costGrowth:8,baseline:'Verified',kpi:'Average handle time',before:10,after:6,unit:'min',target:6,direction:'lower',pipeline:99,sponsor:'Engaged',accuracy:91,trend:0.6,accuracyTarget:90,computeBudget:60000,age:4,evidence:'Illustrative example; handle time and satisfaction metrics inspired by the reference. Annual savings need a staffing or avoided hiring plan.'},
-{id:'invoice',name:'Invoice processing automation',team:'Finance',owner:'CFO',stage:'Production',description:'Extract, validate, and route invoices for human approval.',upfront:180000,data:25000,training:15000,compute:24000,storage:6000,maintenance:30000,oversight:35000,direct:310000,indirect:45000,indirectCash:80,hours:4200,hourly:42,realization:65,adoption:89,ramp:2,delay:0,growth:2,costGrowth:4,baseline:'Verified',kpi:'Processing time',before:18,after:4,unit:'min',target:5,direction:'lower',pipeline:99.5,sponsor:'Engaged',accuracy:98,trend:0.1,accuracyTarget:97,computeBudget:24000,age:8,evidence:'Illustrative finance example. Direct savings represent outsourced processing and late fees; hours recovered are a separate internal team benefit.'},
-{id:'demand',name:'AI demand forecasting',team:'Supply chain',owner:'CFO / CIO',stage:'Pilot',description:'Improve demand planning and reduce inventory carrying costs.',upfront:420000,data:80000,training:35000,compute:67000,storage:24000,maintenance:65000,oversight:80000,direct:520000,indirect:180000,indirectCash:40,hours:1800,hourly:62,realization:50,adoption:61,ramp:6,delay:2,growth:4,costGrowth:8,baseline:'Partial',kpi:'Forecast accuracy',before:61,after:81,unit:'%',target:85,direction:'higher',pipeline:92,sponsor:'Engaged',accuracy:81,trend:0,accuracyTarget:85,computeBudget:48000,age:8,evidence:'Reference identifies no formal prelaunch accuracy baseline. The 61% is a provisional historical proxy; reconcile comparable SKUs, seasonality, and data feed gaps.'},
-{id:'maintenance',name:'Predictive maintenance',team:'Operations',owner:'COO',stage:'Pilot',description:'Predict equipment failures and schedule maintenance proactively.',upfront:1400000,data:120000,training:25000,compute:65000,storage:15000,maintenance:45000,oversight:80000,direct:805000,indirect:0,indirectCash:0,hours:1248,hourly:75,realization:60,adoption:78,ramp:4,delay:2,growth:2,costGrowth:5,baseline:'Partial',kpi:'Unplanned failures / year',before:4,after:0,unit:'events',target:1,direction:'lower',pipeline:99,sponsor:'Engaged',accuracy:94.1,trend:0.8,accuracyTarget:92,computeBudget:65000,age:8,evidence:'Reference: 0 failures in 6 months versus historical 4/year. This does not establish an annual zero-failure rate; validate seasonality and avoided-event attribution.'}
+export const defaults = {
+  rate: 12,
+  years: 5,
+  benefitFactor: 100,
+  costFactor: 100,
+  delay: 0,
+  capacity: false,
+  probIdea: 30,
+  probPilot: 60,
+  probProduction: 90,
+};
+// Neutral values for fields added after the first release; used for new and previously saved projects.
+export const projectDefaults = {
+  volume: 0,
+  volumeUnit: 'transactions',
+  unitCost: 0,
+  dataReadiness: 'Not assessed',
+  integration: 'Not assessed',
+  vendorRisk: 'Not assessed',
+  teamCapacity: 'Not assessed',
+  dataSensitivity: 'Internal',
+  aiRisk: 'Minimal',
+  securityReview: 'Not started',
+  legalReview: 'Not started',
+  modelRiskReview: 'Not started',
+};
+export const examples = [
+  {
+    id: 'vision',
+    name: 'Vision quality control',
+    team: 'Operations',
+    owner: 'COO',
+    stage: 'Production',
+    description: 'Detect defects on packaging lines before they reach customers.',
+    upfront: 680000,
+    data: 0,
+    training: 20000,
+    compute: 48000,
+    storage: 12000,
+    maintenance: 95000,
+    oversight: 80000,
+    direct: 1100000,
+    indirect: 120000,
+    indirectCash: 100,
+    hours: 2736,
+    hourly: 95,
+    realization: 70,
+    adoption: 94,
+    ramp: 2,
+    delay: 0,
+    growth: 3,
+    costGrowth: 5,
+    baseline: 'Verified',
+    kpi: 'Scrap rate',
+    before: 3.2,
+    after: 2.1,
+    unit: '%',
+    target: 2,
+    direction: 'lower',
+    pipeline: 99.2,
+    sponsor: 'Engaged',
+    accuracy: 97.3,
+    trend: 0.2,
+    accuracyTarget: 95,
+    computeBudget: 48000,
+    age: 8,
+    volume: 12000000,
+    volumeUnit: 'packages inspected',
+    unitCost: 0,
+    dataReadiness: 'Low',
+    integration: 'Medium',
+    vendorRisk: 'Low',
+    teamCapacity: 'Low',
+    dataSensitivity: 'Internal',
+    aiRisk: 'Minimal',
+    securityReview: 'Approved',
+    legalReview: 'Approved',
+    modelRiskReview: 'Approved',
+    evidence:
+      'Q3 2025 pilot baseline; sample scenario from reference. Validate full rollout and labor savings before approval.',
+  },
+  {
+    id: 'support',
+    name: 'Customer service copilot',
+    team: 'Customer experience',
+    owner: 'Chief Customer Officer',
+    stage: 'Pilot',
+    description: 'Automate routine requests and assist agents with complex cases.',
+    upfront: 260000,
+    data: 40000,
+    training: 30000,
+    compute: 72000,
+    storage: 18000,
+    maintenance: 42000,
+    oversight: 60000,
+    direct: 420000,
+    indirect: 140000,
+    indirectCash: 50,
+    hours: 7200,
+    hourly: 38,
+    realization: 55,
+    adoption: 76,
+    ramp: 4,
+    delay: 1,
+    growth: 5,
+    costGrowth: 8,
+    baseline: 'Verified',
+    kpi: 'Average handle time',
+    before: 10,
+    after: 6,
+    unit: 'min',
+    target: 6,
+    direction: 'lower',
+    pipeline: 99,
+    sponsor: 'Engaged',
+    accuracy: 91,
+    trend: 0.6,
+    accuracyTarget: 90,
+    computeBudget: 60000,
+    age: 4,
+    volume: 480000,
+    volumeUnit: 'customer requests',
+    unitCost: 0,
+    dataReadiness: 'Medium',
+    integration: 'Medium',
+    vendorRisk: 'High',
+    teamCapacity: 'Medium',
+    dataSensitivity: 'Personal',
+    aiRisk: 'Limited',
+    securityReview: 'Approved',
+    legalReview: 'Approved',
+    modelRiskReview: 'In progress',
+    evidence:
+      'Illustrative example; handle time and satisfaction metrics inspired by the reference. Annual savings need a staffing or avoided hiring plan.',
+  },
+  {
+    id: 'invoice',
+    name: 'Invoice processing automation',
+    team: 'Finance',
+    owner: 'CFO',
+    stage: 'Production',
+    description: 'Extract, validate, and route invoices for human approval.',
+    upfront: 180000,
+    data: 25000,
+    training: 15000,
+    compute: 24000,
+    storage: 6000,
+    maintenance: 30000,
+    oversight: 35000,
+    direct: 310000,
+    indirect: 45000,
+    indirectCash: 80,
+    hours: 4200,
+    hourly: 42,
+    realization: 65,
+    adoption: 89,
+    ramp: 2,
+    delay: 0,
+    growth: 2,
+    costGrowth: 4,
+    baseline: 'Verified',
+    kpi: 'Processing time',
+    before: 18,
+    after: 4,
+    unit: 'min',
+    target: 5,
+    direction: 'lower',
+    pipeline: 99.5,
+    sponsor: 'Engaged',
+    accuracy: 98,
+    trend: 0.1,
+    accuracyTarget: 97,
+    computeBudget: 24000,
+    age: 8,
+    volume: 60000,
+    volumeUnit: 'invoices',
+    unitCost: 0,
+    dataReadiness: 'Low',
+    integration: 'Low',
+    vendorRisk: 'Medium',
+    teamCapacity: 'Low',
+    dataSensitivity: 'Confidential',
+    aiRisk: 'Minimal',
+    securityReview: 'Approved',
+    legalReview: 'Approved',
+    modelRiskReview: 'Approved',
+    evidence:
+      'Illustrative finance example. Direct savings represent outsourced processing and late fees; hours recovered are a separate internal team benefit.',
+  },
+  {
+    id: 'demand',
+    name: 'AI demand forecasting',
+    team: 'Supply chain',
+    owner: 'CFO / CIO',
+    stage: 'Pilot',
+    description: 'Improve demand planning and reduce inventory carrying costs.',
+    upfront: 420000,
+    data: 80000,
+    training: 35000,
+    compute: 67000,
+    storage: 24000,
+    maintenance: 65000,
+    oversight: 80000,
+    direct: 520000,
+    indirect: 180000,
+    indirectCash: 40,
+    hours: 1800,
+    hourly: 62,
+    realization: 50,
+    adoption: 61,
+    ramp: 6,
+    delay: 2,
+    growth: 4,
+    costGrowth: 8,
+    baseline: 'Partial',
+    kpi: 'Forecast accuracy',
+    before: 61,
+    after: 81,
+    unit: '%',
+    target: 85,
+    direction: 'higher',
+    pipeline: 92,
+    sponsor: 'Engaged',
+    accuracy: 81,
+    trend: 0,
+    accuracyTarget: 85,
+    computeBudget: 48000,
+    age: 8,
+    volume: 250000,
+    volumeUnit: 'SKU forecasts',
+    unitCost: 0,
+    dataReadiness: 'High',
+    integration: 'Medium',
+    vendorRisk: 'Low',
+    teamCapacity: 'Medium',
+    dataSensitivity: 'Confidential',
+    aiRisk: 'Minimal',
+    securityReview: 'Approved',
+    legalReview: 'In progress',
+    modelRiskReview: 'In progress',
+    evidence:
+      'Reference identifies no formal prelaunch accuracy baseline. The 61% is a provisional historical proxy; reconcile comparable SKUs, seasonality, and data feed gaps.',
+  },
+  {
+    id: 'maintenance',
+    name: 'Predictive maintenance',
+    team: 'Operations',
+    owner: 'COO',
+    stage: 'Pilot',
+    description: 'Predict equipment failures and schedule maintenance proactively.',
+    upfront: 1400000,
+    data: 120000,
+    training: 25000,
+    compute: 65000,
+    storage: 15000,
+    maintenance: 45000,
+    oversight: 80000,
+    direct: 805000,
+    indirect: 0,
+    indirectCash: 0,
+    hours: 1248,
+    hourly: 75,
+    realization: 60,
+    adoption: 78,
+    ramp: 4,
+    delay: 2,
+    growth: 2,
+    costGrowth: 5,
+    baseline: 'Partial',
+    kpi: 'Unplanned failures / year',
+    before: 4,
+    after: 0,
+    unit: 'events',
+    target: 1,
+    direction: 'lower',
+    pipeline: 99,
+    sponsor: 'Engaged',
+    accuracy: 94.1,
+    trend: 0.8,
+    accuracyTarget: 92,
+    computeBudget: 65000,
+    age: 8,
+    volume: 2000000,
+    volumeUnit: 'sensor predictions',
+    unitCost: 0,
+    dataReadiness: 'Medium',
+    integration: 'High',
+    vendorRisk: 'Medium',
+    teamCapacity: 'High',
+    dataSensitivity: 'Internal',
+    aiRisk: 'Minimal',
+    securityReview: 'In progress',
+    legalReview: 'Not started',
+    modelRiskReview: 'Not started',
+    evidence:
+      'Reference: 0 failures in 6 months versus historical 4/year. This does not establish an annual zero-failure rate; validate seasonality and avoided-event attribution.',
+  },
 ];
-export const setup=p=>p.upfront+p.data+p.training;
-export const operating=p=>p.compute+p.storage+p.maintenance+p.oversight;
-export function health(p){const signals=[{name:'Adoption',level:p.age>=6&&p.adoption<20?2:p.age>=3&&p.adoption<40?1:0,value:p.adoption+'%'},{name:'Data pipeline',level:p.pipeline<95?2:p.pipeline<98?1:0,value:p.pipeline+'%'},{name:'Sponsor',level:p.sponsor==='Missing'?2:p.sponsor==='Limited'?1:0,value:p.sponsor},{name:'Accuracy',level:p.accuracy<p.accuracyTarget&&p.trend<=0?1:0,value:p.accuracy+'% · '+(p.trend>=0?'+':'')+p.trend+' pp/mo'}];const red=signals.filter(s=>s.level===2).length,yellow=signals.filter(s=>s.level===1).length;return {signals,action:red>=2?'Escalate':red||yellow>=2?'Investigate':yellow?'Monitor':'Healthy'};}
-export function irr(flows){if(!flows.some(v=>v>0)||!flows.some(v=>v<0))return null;let changes=0;let prev=0;for(const f of flows){if(f){const sign=Math.sign(f);if(prev&&sign!==prev)changes++;prev=sign;}}if(changes!==1)return null;const value=r=>flows.reduce((s,f,i)=>s+f/Math.pow(1+r,i),0);let lo=-.9999,hi=1;while(value(hi)>0&&hi<1e6)hi*=2;if(value(lo)*value(hi)>0)return null;for(let i=0;i<160;i++){const m=(lo+hi)/2;if(value(m)>0)lo=m;else hi=m;}return Math.pow(1+(lo+hi)/2,12)-1;}
-export function calculate(p,s=defaults){const cap=setup(p)*s.costFactor/100,op=operating(p)*s.costFactor/100;const capacity=p.hours*p.hourly*p.realization/100;const gross=(p.direct+p.indirect*p.indirectCash/100+(s.capacity?capacity:0))*s.benefitFactor/100;const months=s.years*12,flows=[-cap],yearly=[],cumulative=[-cap];let totalBenefits=0,totalCosts=cap,payback=cap===0?0:null,discountedPayback=cap===0?0:null,discounted=-cap,npv=-cap;for(let m=1;m<=months;m++){const yr=Math.floor((m-1)/12),active=m-p.delay-s.delay;const ramp=active<=0?0:Math.min(active/Math.max(1,p.ramp),1);const benefit=gross/12*p.adoption/100*ramp*Math.pow(1+p.growth/100,yr);const cost=op/12*Math.pow(1+p.costGrowth/100,yr);const net=benefit-cost;const before=cumulative.at(-1);flows.push(net);cumulative.push(before+net);const pv=net/Math.pow(1+s.rate/100,m/12);if(payback===null&&before<0&&before+net>=0)payback=(m-1)+(-before/net);if(discountedPayback===null&&discounted<0&&discounted+pv>=0)discountedPayback=(m-1)+(-discounted/pv);discounted+=pv;npv+=pv;totalBenefits+=benefit;totalCosts+=cost;yearly[yr]??={year:yr+1,benefit:0,cost:0,net:0};yearly[yr].benefit+=benefit;yearly[yr].cost+=cost;yearly[yr].net+=net;}const h=health(p);let recommendation=h.action==='Escalate'||h.action==='Investigate'||p.baseline!=='Verified'?'Intervene':npv<=0?'Rework':p.stage==='Production'&&p.adoption>=80?'Scale':'Continue';return {npv,irr:irr(flows),payback,discountedPayback,roi:(totalBenefits-totalCosts)/totalCosts,capitalROI:(totalBenefits-totalCosts)/cap,referencePayback:(setup(p)+operating(p))/(p.direct+capacity-operating(p))*12,capacity,cap,op,gross,totalBenefits,totalCosts,flows,cumulative,yearly,health:h,recommendation};}
-
+export const setup = p => p.upfront + p.data + p.training;
+export const operating = p => p.compute + p.storage + p.maintenance + p.oversight;
+export function health(p) {
+  if (p.stage === 'Idea') return { signals: [], action: 'Not launched' };
+  const signals = [
+    {
+      name: 'Adoption',
+      level: p.age >= 6 && p.adoption < 20 ? 2 : p.age >= 3 && p.adoption < 40 ? 1 : 0,
+      value: p.adoption + '%',
+    },
+    { name: 'Data pipeline', level: p.pipeline < 95 ? 2 : p.pipeline < 98 ? 1 : 0, value: p.pipeline + '%' },
+    {
+      name: 'Sponsor',
+      level: p.sponsor === 'Missing' ? 2 : p.sponsor === 'Limited' ? 1 : 0,
+      value: p.sponsor,
+    },
+    {
+      name: 'Accuracy',
+      level: p.accuracy < p.accuracyTarget && p.trend <= 0 ? 1 : 0,
+      value: p.accuracy + '% · ' + (p.trend >= 0 ? '+' : '') + p.trend + ' pp/mo',
+    },
+  ];
+  const red = signals.filter(s => s.level === 2).length,
+    yellow = signals.filter(s => s.level === 1).length;
+  return {
+    signals,
+    action: red >= 2 ? 'Escalate' : red || yellow >= 2 ? 'Investigate' : yellow ? 'Monitor' : 'Healthy',
+  };
+}
+const ratings = ['Low', 'Medium', 'High'];
+export function readiness(p) {
+  const items = [
+    ['Data readiness', p.dataReadiness],
+    ['Integration', p.integration],
+    ['Vendor dependency', p.vendorRisk],
+    ['Team capacity', p.teamCapacity],
+  ].map(([name, value]) => ({
+    name,
+    value,
+    level: value === 'High' ? 2 : value === 'Medium' ? 1 : value === 'Low' ? 0 : null,
+  }));
+  const high = items.filter(i => i.level === 2).length,
+    medium = items.filter(i => i.level === 1).length,
+    unknown = items.filter(i => i.level === null).length;
+  return {
+    items,
+    status: high >= 2 ? 'Not ready' : high || medium >= 2 ? 'At risk' : unknown ? 'Incomplete' : 'Ready',
+  };
+}
+export function compliance(p) {
+  const required = [['Security review', p.securityReview]];
+  if (p.dataSensitivity === 'Personal') required.push(['Legal & privacy review', p.legalReview]);
+  if (p.aiRisk === 'High') required.push(['Model risk review', p.modelRiskReview]);
+  const missing = required.filter(([, v]) => v !== 'Approved').map(([n]) => n);
+  return {
+    required: required.map(([n]) => n),
+    missing,
+    status: !missing.length ? 'Cleared' : p.stage === 'Idea' ? 'Pending' : 'Blocked',
+  };
+}
+export function breakEven({ cap, pvBenefits, pvFixed, pvVariable }) {
+  const costs = cap + pvFixed + pvVariable;
+  return {
+    benefits: pvBenefits > 0 ? costs / pvBenefits : null,
+    costHeadroom: costs > 0 ? pvBenefits / costs - 1 : null,
+  };
+}
+export function paybackMonths(flows) {
+  let c = 0,
+    negative = false,
+    payback = null;
+  for (let m = 0; m < flows.length; m++) {
+    const before = c;
+    c += flows[m];
+    if (c < 0) {
+      negative = true;
+      payback = null;
+    } else if (before < 0) payback ??= m - 1 + -before / flows[m];
+  }
+  return negative ? payback : 0;
+}
+export function irr(flows) {
+  if (!flows.some(v => v > 0) || !flows.some(v => v < 0)) return null;
+  let changes = 0;
+  let prev = 0;
+  for (const f of flows) {
+    if (f) {
+      const sign = Math.sign(f);
+      if (prev && sign !== prev) changes++;
+      prev = sign;
+    }
+  }
+  if (changes !== 1) return null;
+  const value = r => flows.reduce((s, f, i) => s + f / Math.pow(1 + r, i), 0);
+  let lo = -0.9999,
+    hi = 1;
+  while (value(hi) > 0 && hi < 1e6) hi *= 2;
+  if (value(lo) * value(hi) > 0) return null;
+  for (let i = 0; i < 160; i++) {
+    const m = (lo + hi) / 2;
+    if (value(m) > 0) lo = m;
+    else hi = m;
+  }
+  return Math.pow(1 + (lo + hi) / 2, 12) - 1;
+}
+export function calculate(p, s = defaults) {
+  const cap = (setup(p) * s.costFactor) / 100,
+    op = (operating(p) * s.costFactor) / 100;
+  const capacity = (p.hours * p.hourly * p.realization) / 100;
+  const gross =
+    ((p.direct + (p.indirect * p.indirectCash) / 100 + (s.capacity ? capacity : 0)) * s.benefitFactor) / 100;
+  const months = s.years * 12,
+    flows = [-cap],
+    pvFlows = [-cap],
+    yearly = [],
+    cumulative = [-cap];
+  let totalBenefits = 0,
+    totalCosts = cap,
+    npv = -cap,
+    pvBenefits = 0,
+    pvFixed = 0,
+    pvVariable = 0;
+  for (let m = 1; m <= months; m++) {
+    const yr = Math.floor((m - 1) / 12),
+      active = m - p.delay - s.delay;
+    const ramp = active <= 0 ? 0 : Math.min(active / Math.max(1, p.ramp), 1);
+    const usage = (p.adoption / 100) * ramp * Math.pow(1 + p.growth / 100, yr),
+      benefit = (gross / 12) * usage,
+      fixed = (op / 12) * Math.pow(1 + p.costGrowth / 100, yr),
+      variable = ((((p.unitCost || 0) * (p.volume || 0)) / 12) * usage * s.costFactor) / 100,
+      cost = fixed + variable,
+      net = benefit - cost,
+      d = Math.pow(1 + s.rate / 100, -m / 12);
+    pvBenefits += benefit * d;
+    pvFixed += fixed * d;
+    pvVariable += variable * d;
+    flows.push(net);
+    cumulative.push(cumulative.at(-1) + net);
+    const pv = net * d;
+    pvFlows.push(pv);
+    npv += pv;
+    totalBenefits += benefit;
+    totalCosts += cost;
+    yearly[yr] ??= { year: yr + 1, benefit: 0, cost: 0, net: 0 };
+    yearly[yr].benefit += benefit;
+    yearly[yr].cost += cost;
+    yearly[yr].net += net;
+  }
+  const probability = (s['prob' + p.stage] ?? 100) / 100,
+    steadyVolume = ((p.volume || 0) * p.adoption) / 100,
+    unitCost =
+      steadyVolume > 0 ? (op + ((p.unitCost || 0) * steadyVolume * s.costFactor) / 100) / steadyVolume : 0,
+    unitBenefit = steadyVolume > 0 ? (gross * p.adoption) / 100 / steadyVolume : 0;
+  const h = health(p),
+    ready = readiness(p),
+    comply = compliance(p);
+  let recommendation =
+    h.action === 'Escalate' ||
+    h.action === 'Investigate' ||
+    p.baseline !== 'Verified' ||
+    comply.status === 'Blocked'
+      ? 'Intervene'
+      : npv <= 0
+        ? 'Rework'
+        : p.stage === 'Production' && p.adoption >= 80
+          ? 'Scale'
+          : 'Continue';
+  return {
+    npv,
+    irr: irr(flows),
+    payback: paybackMonths(flows),
+    discountedPayback: paybackMonths(pvFlows),
+    fundingRequest: cap + yearly[0].cost,
+    probability,
+    riskAdjustedNPV: probability * npv - (1 - probability) * cap,
+    pvBenefits,
+    pvFixed,
+    pvVariable,
+    breakEven: {
+      ...breakEven({ cap, pvBenefits, pvFixed, pvVariable }),
+      adoption:
+        pvBenefits - pvVariable > 0 ? (p.adoption * (cap + pvFixed)) / (pvBenefits - pvVariable) : null,
+    },
+    unit:
+      steadyVolume > 0
+        ? { volume: steadyVolume, cost: unitCost, benefit: unitBenefit, net: unitBenefit - unitCost }
+        : null,
+    readiness: ready,
+    compliance: comply,
+    roi: (totalBenefits - totalCosts) / totalCosts,
+    capitalROI: (totalBenefits - totalCosts) / cap,
+    referencePayback: ((setup(p) + operating(p)) / (p.direct + capacity - operating(p))) * 12,
+    capacity,
+    cap,
+    op,
+    gross,
+    totalBenefits,
+    totalCosts,
+    flows,
+    cumulative,
+    yearly,
+    health: h,
+    recommendation,
+  };
+}

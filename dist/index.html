@@ -1,1 +1,85 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="An executive workspace to evaluate AI investment value, capital returns and portfolio health."><title>AI Capital — Investment workspace</title><link rel="stylesheet" href="style.css"></head><body><aside class="sidebar"><a class="brand" href="/" aria-label="AI Capital home"><span class="brand-mark">A<span>▴</span></span><span>AI Capital<small>DECISION WORKSPACE</small></span></a><div class="workspace">AC <span>Acme portfolio<small>Illustrative company</small></span></div><div class="nav-label">WORKSPACE</div><nav><button class="nav active" data-view="overview">◫ <span>Portfolio overview</span></button><button class="nav" data-view="scenarios">◷ <span>Scenario lab</span></button><button class="nav" data-view="evidence">▤ <span>Evidence & health</span></button><button class="nav" data-view="method">⌘ <span>Methodology</span></button></nav><div class="sidebar-bottom"><div class="demo-dot"></div> Example portfolio<small>Forecasts, not verified returns</small><div class="profile"><b>EX</b><span>Executive view<small>Capital allocation</small></span></div></div></aside><main><header><span>Workspace <span class="slash">/</span> <b id="breadcrumb">Portfolio overview</b></span><div><span class="saved" id="saved">● Saved on this browser</span><button class="btn" id="export">↓ Export portfolio</button></div></header><div class="content"><div class="page-heading"><div><div class="eyebrow">AI INVESTMENT INTELLIGENCE</div><h1 id="title">Make every AI investment count.</h1><p id="subtitle">A clear view of value, capital returns, and the signals behind them.</p></div><button class="btn primary" id="add">＋ Add automation</button></div><div class="toolbar"><div class="segmented"><button data-scenario="base" class="selected">Base case</button><button data-scenario="downside">Downside</button><button data-scenario="upside">Upside</button></div><div class="global-fields"><label>Horizon <select id="years"><option value="2">2 years</option><option value="3">3 years</option><option value="5" selected>5 years</option><option value="10">10 years</option></select></label><label>Hurdle rate <input id="rate" type="number" min="0" max="80" step="0.5" value="12">%</label><button class="text-btn" id="reset">Reset demo</button></div></div><section id="view"></section><footer><span>Illustrative forecasts · USD · Before tax · Monthly cash flows</span><span>Decision support with transparent assumptions</span></footer></div></main><aside id="detail" class="detail" hidden></aside><dialog id="add-dialog"><form id="add-form"><div class="eyebrow">NEW INVESTMENT</div><h2>Add an AI automation</h2><p>Start with a business case. All assumptions can be edited later.</p><label>Automation name<input name="name" required maxlength="90" placeholder="e.g. Contract review assistant"></label><label>Department<input name="team" required maxlength="60" placeholder="e.g. Legal"></label><label>Executive owner<input name="owner" required maxlength="60" placeholder="e.g. General Counsel"></label><label>Initial implementation ($)<input name="upfront" type="number" min="0" max="1000000000" value="200000" required></label><label>Annual direct savings ($)<input name="direct" type="number" min="0" max="1000000000" value="300000" required></label><div class="dialog-actions"><button type="button" class="btn" id="cancel-add">Cancel</button><button class="btn primary">Add to portfolio</button></div></form></dialog><div id="toast" role="status"></div><script type="module" src="app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="An executive workspace to evaluate AI investment value, capital returns and portfolio health."
+    />
+    <title>AI Capital — Investment workspace</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="AI Capital home"
+        ><span class="brand-mark">A<span>▴</span></span
+        ><span>AI Capital<small>DECISION WORKSPACE</small></span></a
+      >
+      <div class="workspace">
+        AC <span>Acme portfolio<small>Illustrative company</small></span>
+      </div>
+      <div class="nav-label">WORKSPACE</div>
+      <nav>
+        <button class="nav active" data-view="overview">◫ <span>Portfolio overview</span></button
+        ><button class="nav" data-view="scenarios">◷ <span>Scenario lab</span></button
+        ><button class="nav" data-view="evidence">▤ <span>Evidence & health</span></button
+        ><button class="nav" data-view="method">⌘ <span>Methodology</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="demo-dot"></div>
+        Example portfolio<small>Forecasts, not verified returns</small>
+        <div class="profile">
+          <b>EX</b><span>Executive view<small>Capital allocation</small></span>
+        </div>
+      </div>
+    </aside>
+    <main>
+      <header>
+        <span>Workspace <span class="slash">/</span> <b id="breadcrumb">Portfolio overview</b></span>
+        <div>
+          <span class="saved" id="saved">● Saved on this browser</span
+          ><button class="btn" id="export">↓ Export portfolio</button>
+        </div>
+      </header>
+      <div class="content">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">AI INVESTMENT INTELLIGENCE</div>
+            <h1 id="title">Make every AI investment count.</h1>
+            <p id="subtitle">A clear view of value, capital returns, and the signals behind them.</p>
+          </div>
+          <button class="btn primary" id="add">＋ Add automation</button>
+        </div>
+        <div class="toolbar">
+          <div class="segmented">
+            <button data-scenario="base" class="selected">Base case</button
+            ><button data-scenario="downside">Downside</button><button data-scenario="upside">Upside</button>
+          </div>
+          <div class="global-fields">
+            <label
+              >Horizon
+              <select id="years">
+                <option value="2">2 years</option>
+                <option value="3">3 years</option>
+                <option value="5" selected>5 years</option>
+                <option value="10">10 years</option>
+              </select></label
+            ><label
+              >Hurdle rate <input id="rate" type="number" min="0" max="80" step="0.5" value="12" />%</label
+            ><button class="text-btn" id="reset">Reset demo</button>
+          </div>
+        </div>
+        <section id="view"></section>
+        <footer>
+          <span>Illustrative forecasts · USD · Before tax · Monthly cash flows</span
+          ><span>Decision support with transparent assumptions</span>
+        </footer>
+      </div>
+    </main>
+    <aside id="detail" class="detail" hidden></aside>
+    <dialog id="add-dialog" aria-labelledby="wizard-title"><form id="add-form" novalidate></form></dialog>
+    <div id="toast" role="status"></div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

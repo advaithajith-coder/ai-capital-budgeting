@@ -48,3 +48,11 @@ Vision QC, demand forecasting and predictive maintenance draw names and selected
 ## External financial convention check
 
 [ACCA Investment appraisal](https://www.accaglobal.com/gb/en/student/exam-support-resources/fundamentals-exams-study-resources/f9/technical-articles/advanced-investment-appraisal.html) describes discounted cash flow NPV/IRR and cash-flow timing. The implementation adapts effective annual discounting to monthly periods and tests it independently against an annuity equation.
+
+## Funding, risk, break-even and delivery metrics
+
+- **Year-1 funding request** = initial capital + first twelve months of scheduled running costs (fixed and usage-based). **Total cost of ownership** = initial capital + all horizon running costs, undiscounted. Both are budgeting figures; NPV, IRR and payback keep one-time costs at month 0 and running costs in the month incurred, so first-year operating cost is never counted twice.
+- **Risk-adjusted NPV** = p × NPV − (1 − p) × initial capital, where p is the editable probability of success for the project's stage (defaults Idea 30%, Pilot 60%, Production 90%; demo policy, not reference data). Portfolio value is the sum.
+- **Break-even** is solved in closed form because NPV is linear in each driver: benefits multiplier = (capital + PV fixed + PV usage costs) ÷ PV benefits; cost headroom = PV benefits ÷ (capital + PV costs) − 1; adoption = adoption × (capital + PV fixed) ÷ (PV benefits − PV usage costs). Tests confirm each value returns NPV to zero.
+- **Usage-based cost** = unit cost × annual volume × adoption × ramp × benefit-growth index, charged only once usage begins. Fixed running costs keep their own cost growth. Example volumes are illustrative and example unit costs are zero, so reference compute figures remain fixed costs.
+- **Delivery readiness** (data, integration, vendor, team) and **compliance** (security always; legal & privacy for personal data; model risk for high-risk AI) are rule-based. A pilot or production project missing a required approval is Blocked and recommended for intervention; readiness is advisory only.
