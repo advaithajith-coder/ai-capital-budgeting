@@ -1370,3 +1370,7 @@ input.mini.wide {
   padding: 4px 12px 12px;
   margin-top: 12px;
 }
+.muted {
+  color: var(--muted);
+  font-weight: 400;
+}

@@ -13,6 +13,8 @@ export const defaults = {
   riskMedium: 0.9,
   approvalFactor: 0.85,
   probFloor: 5,
+  sponsorLimited: 0.9,
+  sponsorMissing: 0.75,
   // Shared internal tech team. Loaded annual cost per person; headcount totals 25.
   teamCost: true,
   team: [
@@ -361,10 +363,15 @@ export function staffing(p, s = defaults) {
     runCoverage: runNeed > 0 ? assigned / runNeed : null,
   };
 }
+// Build coverage, or run coverage once a project is in production.
+function staffedShare(p, team) {
+  return p.stage === 'Production' && team.runCoverage !== null ? team.runCoverage : team.coverage;
+}
 export function health(p, s = defaults) {
   if (p.stage === 'Idea') return { signals: [], action: 'Not launched' };
   const team = staffing(p, s),
-    staffed = p.stage === 'Production' && team.runCoverage !== null ? team.runCoverage : team.coverage;
+    staffed = staffedShare(p, team),
+    overrun = computeOverrun(p);
   const signals = [
     {
       name: 'Adoption',
@@ -392,6 +399,12 @@ export function health(p, s = defaults) {
           ? `${team.assigned} assigned · ${p.runNeed} run FTE needed`
           : Math.round(staffed * 100) + '% of build team',
     });
+  if (overrun !== null)
+    signals.push({
+      name: 'Compute vs budget',
+      level: overrun > 0.25 ? 2 : overrun > 0.1 ? 1 : 0,
+      value: (overrun > 0 ? '+' : '') + Math.round(overrun * 100) + '% vs budget',
+    });
   const red = signals.filter(s => s.level === 2).length,
     yellow = signals.filter(s => s.level === 1).length;
   return {
@@ -400,15 +413,24 @@ export function health(p, s = defaults) {
   };
 }
 const ratings = ['Low', 'Medium', 'High'];
-export function readiness(p) {
+// Compute run-rate over (+) or under (−) the approved budget, as a fraction; null without a budget.
+export function computeOverrun(p) {
+  return p.computeBudget > 0 ? p.compute / p.computeBudget - 1 : null;
+}
+// Team capacity comes from Tech team staffing when the project has a team need; otherwise the manual rating.
+export function readiness(p, s = defaults) {
+  const team = staffing(p, s),
+    staffed = team.planned ? staffedShare(p, team) : null,
+    teamValue = staffed === null ? p.teamCapacity : staffed < 0.5 ? 'High' : staffed < 1 ? 'Medium' : 'Low';
   const items = [
     ['Data readiness', p.dataReadiness],
     ['Integration', p.integration],
     ['Vendor dependency', p.vendorRisk],
-    ['Team capacity', p.teamCapacity],
-  ].map(([name, value]) => ({
+    ['Team capacity', teamValue, staffed !== null],
+  ].map(([name, value, derived = false]) => ({
     name,
     value,
+    derived,
     level: value === 'High' ? 2 : value === 'Medium' ? 1 : value === 'Low' ? 0 : null,
   }));
   const high = items.filter(i => i.level === 2).length,
@@ -436,11 +458,13 @@ export function successProbability(p, s = defaults) {
   const base = s['prob' + p.stage] ?? 100,
     factors = [],
     unassessed = [];
-  for (const item of readiness(p).items) {
+  for (const item of readiness(p, s).items) {
     if (item.level === 2) factors.push({ name: item.name + ' high risk', factor: s.riskHigh });
     else if (item.level === 1) factors.push({ name: item.name + ' medium risk', factor: s.riskMedium });
     else if (item.level === null) unassessed.push(item.name);
   }
+  if (p.sponsor === 'Limited') factors.push({ name: 'Sponsor limited', factor: s.sponsorLimited });
+  if (p.sponsor === 'Missing') factors.push({ name: 'Sponsor missing', factor: s.sponsorMissing });
   if (p.stage !== 'Idea')
     for (const name of compliance(p).missing) factors.push({ name: name + ' missing', factor: s.approvalFactor });
   const computed = Math.max(s.probFloor, factors.reduce((v, x) => v * x.factor, base)),
@@ -456,6 +480,16 @@ export function successProbability(p, s = defaults) {
     reason,
     value: overridden ? Math.min(100, Math.max(0, p.probOverride)) : computed,
   };
+}
+// Measured progress from baseline toward target, capped at 100%. Scales estimated benefits for the
+// evidence-adjusted NPV; it assumes cash benefit moves in proportion to the business KPI.
+export function evidenceProgress(p) {
+  const better = p.direction === 'higher' ? p.target > p.before : p.target < p.before;
+  if (p.stage === 'Idea') return { applicable: false, reason: 'Not launched yet' };
+  if (p.baseline === 'Missing') return { applicable: false, reason: 'No baseline' };
+  if (!better) return { applicable: false, reason: 'Target is not an improvement on the baseline' };
+  const raw = (p.direction === 'higher' ? p.after - p.before : p.before - p.after) / Math.abs(p.target - p.before);
+  return { applicable: true, raw, progress: Math.min(1, Math.max(0, raw)), provisional: p.baseline === 'Partial' };
 }
 export function breakEven({ cap, pvBenefits, pvFixed, pvVariable }) {
   const costs = cap + pvFixed + pvVariable;
@@ -523,7 +557,8 @@ export function calculate(p, s = defaults) {
     npv = -cap,
     pvBenefits = 0,
     pvFixed = 0,
-    pvVariable = 0;
+    pvVariable = 0,
+    pvOverrun = 0;
   for (let m = 1; m <= months; m++) {
     const yr = Math.floor((m - 1) / 12),
       active = m - effDelay - s.delay;
@@ -544,6 +579,9 @@ export function calculate(p, s = defaults) {
     pvBenefits += benefit * d;
     pvFixed += fixed * d;
     pvVariable += variable * d;
+    if (p.computeBudget > 0)
+      pvOverrun +=
+        ((((Math.max(0, p.compute - p.computeBudget) / 12) * Math.pow(1 + p.costGrowth / 100, yr) * s.costFactor) / 100) * d);
     flows.push(net);
     cumulative.push(cumulative.at(-1) + net);
     const pv = net * d;
@@ -567,7 +605,8 @@ export function calculate(p, s = defaults) {
         : 0,
     unitBenefit = steadyVolume > 0 ? (gross * p.adoption) / 100 / steadyVolume : 0;
   const h = health(p, s),
-    ready = readiness(p),
+    ready = readiness(p, s),
+    evidence = evidenceProgress(p),
     comply = compliance(p);
   let recommendation =
     h.action === 'Escalate' ||
@@ -588,6 +627,8 @@ export function calculate(p, s = defaults) {
     fundingRequest: cap + yearly[0].cost,
     probability,
     success,
+    evidence: { ...evidence, npv: evidence.applicable ? npv - (1 - evidence.progress) * pvBenefits : null },
+    compute: { overrun: computeOverrun(p), pvCost: pvOverrun },
     riskAdjustedNPV: probability * npv - (1 - probability) * cap,
     pvBenefits,
     pvFixed,

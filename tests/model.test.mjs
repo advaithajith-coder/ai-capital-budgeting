@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculate, defaults, examples, irr, health, readiness, compliance, paybackMonths, staffing, successProbability } from '../dist/model.js';
+import { calculate, defaults, examples, irr, health, readiness, compliance, paybackMonths, staffing, successProbability, evidenceProgress, computeOverrun } from '../dist/model.js';
 const simple = {
   ...examples[0],
   upfront: 1000,
@@ -179,7 +179,7 @@ test('Under-staffing stretches delivery, no one in a needed role stalls it', () 
   assert.equal(half.flows[4], -10000);
   const stalled = calculate({ ...p, alloc: { ml: 0 } }, oneRole);
   assert.equal(stalled.totalBenefits, 0);
-  assert.equal(stalled.health.signals.at(-1).level, 2);
+  assert.equal(stalled.health.signals.find(x => x.name === 'Team staffing').level, 2);
 });
 test('Over-staffing speeds delivery with diminishing returns, capped at half the time', () => {
   const p = { ...simple, delay: 4, ramp: 4, need: { ml: 1 }, runNeed: 1 };
@@ -223,4 +223,40 @@ test('Not assessed ratings are neutral and an override needs a reason', () => {
   const withReason = successProbability({ ...p, probOverrideOn: true, probOverride: 40, probReason: 'Vendor contract signed' });
   assert.equal(withReason.value, 40);
   assert.equal(withReason.overridden, true);
+});
+test('Team capacity risk follows Tech team staffing when a team need exists', () => {
+  const p = { ...simple, stage: 'Pilot', teamCapacity: 'Low', need: { ml: 4 }, runNeed: 1 },
+    level = alloc => readiness({ ...p, alloc: { ml: alloc } }, oneRole).items.find(i => i.name === 'Team capacity');
+  assert.equal(level(4).value, 'Low');
+  assert.equal(level(2).value, 'Medium');
+  assert.equal(level(1).value, 'High');
+  assert.equal(level(1).derived, true);
+  assert.equal(readiness({ ...p, need: {}, teamCapacity: 'High' }, oneRole).items[3].value, 'High');
+});
+test('Sponsor engagement adjusts probability of success', () => {
+  const p = { ...simple, stage: 'Production', dataReadiness: 'Low', integration: 'Low', vendorRisk: 'Low', teamCapacity: 'Low' };
+  assert.equal(successProbability({ ...p, sponsor: 'Engaged' }).computed, 90);
+  assert.ok(Math.abs(successProbability({ ...p, sponsor: 'Limited' }).computed - 81) < 1e-9);
+  assert.ok(Math.abs(successProbability({ ...p, sponsor: 'Missing' }).computed - 67.5) < 1e-9);
+});
+test('Evidence progress scales benefits toward the measured KPI result', () => {
+  const p = { ...simple, stage: 'Pilot', baseline: 'Verified', direction: 'higher', before: 60, target: 80 };
+  assert.equal(evidenceProgress({ ...p, after: 70 }).progress, 0.5);
+  assert.equal(evidenceProgress({ ...p, after: 95 }).progress, 1);
+  assert.equal(evidenceProgress({ ...p, after: 50 }).progress, 0);
+  assert.equal(evidenceProgress({ ...p, direction: 'lower', before: 10, after: 7, target: 4 }).progress, 0.5);
+  assert.equal(evidenceProgress({ ...p, after: 70, stage: 'Idea' }).applicable, false);
+  assert.equal(evidenceProgress({ ...p, after: 70, baseline: 'Missing' }).applicable, false);
+  assert.equal(evidenceProgress({ ...p, after: 70, target: 50 }).applicable, false);
+  const r = calculate({ ...p, after: 70 });
+  assert.ok(Math.abs(r.evidence.npv - calculate({ ...p, after: 70 }, { ...defaults, benefitFactor: 50 }).npv) < 1e-6);
+});
+test('Compute overrun is flagged and its cost equals the NPV gap to budget', () => {
+  const p = { ...simple, compute: 1500, computeBudget: 1200, costGrowth: 5 };
+  assert.ok(Math.abs(computeOverrun(p) - 0.25) < 1e-12);
+  assert.equal(calculate(p).health.signals.find(x => x.name === 'Compute vs budget').level, 1);
+  assert.equal(calculate({ ...p, compute: 1600 }).health.signals.find(x => x.name === 'Compute vs budget').level, 2);
+  const r = calculate(p);
+  assert.ok(Math.abs(r.compute.pvCost - (calculate({ ...p, compute: 1200 }).npv - r.npv)) < 1e-6);
+  assert.equal(computeOverrun({ ...p, computeBudget: 0 }), null);
 });
