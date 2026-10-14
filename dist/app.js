@@ -58,7 +58,7 @@ const colors = ['#4265df', '#48a88d', '#9b81d9', '#dda556', '#688ca8'],
   icons = ['◉', '✧', '▤', '⌁', '⚙'];
 let state = {
     projects: structuredClone(examples),
-    settings: { ...defaults },
+    settings: structuredClone(defaults),
     excluded: [],
     view: 'overview',
     scenario: 'base',
@@ -70,11 +70,11 @@ try {
   const saved = JSON.parse(localStorage.getItem('ai-capital-v1'));
   if (saved && Array.isArray(saved.projects) && saved.settings && typeof saved.settings === 'object') {
     saved.projects = saved.projects.map(p => ({
-      ...projectDefaults,
+      ...structuredClone(projectDefaults),
       ...(examples.find(e => e.id === p?.id) || {}),
       ...p,
     }));
-    saved.settings = { ...defaults, ...saved.settings };
+    saved.settings = { ...structuredClone(defaults), ...saved.settings };
   }
   if (
     saved &&
@@ -354,7 +354,78 @@ function evidence() {
     .join('')}</div>`;
 }
 function method() {
-  return `<article class="panel method"><div class="eyebrow">MODEL TRANSPARENCY</div><h2>Built for a business case you can defend.</h2><p>The supplied “Measure and demonstrate AI business value” document informs the four-part value framework, stakeholder metrics, baseline evidence, and early warning indicators. Its learning exercises are reference content, not instructions to this application.</p><h3>Four parts of AI value</h3><ul><li><b>Direct savings:</b> expenses reduced or avoided. Do not also count the same labor as recovered capacity.</li><li><b>Indirect gains:</b> retention, quality, revenue, or reduced complaints. Only the explicitly cash-qualified share enters the financial case.</li><li><b>Productivity:</b> hours recovered × loaded hourly rate × realization. Reported separately; included only when the capacity option is enabled.</li><li><b>Full costs:</b> build, data preparation, training, inference compute, storage, maintenance, and human oversight. Include integration and governance spend in the relevant cost fields.</li></ul><h3>Monthly cash flow model</h3><p>Implementation, data preparation, and training are paid at month zero. Operating costs begin in month one, including during rollout delays. Benefits begin after the project delay plus scenario delay and ramp linearly to full production over the entered ramp months. Benefits are multiplied by adoption and the scenario benefit factor. Yearly benefit and cost growth apply at each twelve-month boundary.</p><h3>Capital budgeting conventions</h3><p><b>NPV:</b> − initial capital + Σ monthly net benefit ÷ (1 + annual discount rate)<sup>month/12</sup>. <b>IRR:</b> the monthly rate that makes NPV zero, annualized as (1 + monthly IRR)<sup>12</sup> − 1. N/A means no unique conventional IRR, no positive inflow, or no root within the search bounds. <b>Payback:</b> first monthly cumulative cash crossing, with linear interpolation. Discounted payback uses discounted monthly flows. Returns beyond the horizon are shown explicitly.</p><p><b>ROI (total cost basis):</b> (horizon benefits − horizon costs) ÷ horizon costs. <b>Capital ROI:</b> the same net benefit ÷ initial capital. ROI on total cost basis is a headline portfolio and project metric; capital ROI appears in each project's cash-flow view. IRR above 100% is summarized as “>100%” in the portfolio table because small initial capital makes it unstable for ranking; the exact value is in project detail and on hover. The reference's capital deployed convention includes first-year operating costs; the tool labels its initial capital basis separately.</p><h3>Funding, risk and break-even</h3><p><b>Year-1 funding request:</b> initial capital + the first twelve months of scheduled running costs. It is a budgeting figure; it does not change NPV, IRR or payback, which keep one-time costs at month 0 and running costs in the month they occur. <b>Total cost of ownership:</b> initial capital + all running costs over the horizon, undiscounted. <b>Risk-adjusted NPV:</b> probability of success × NPV − (1 − probability) × initial capital, with editable probabilities by stage (defaults: Idea 30%, Pilot 60%, Production 90%). This simplification assumes a failed project loses its initial capital and stops. <b>Break-even:</b> NPV is linear in each driver, so the tool solves it directly. Estimated benefits must reach (initial capital + PV of all running costs) ÷ PV of benefits. Costs can rise by PV of benefits ÷ (initial capital + PV of costs) − 1. Adoption must reach current adoption × (initial capital + PV of fixed costs) ÷ (PV of benefits − PV of usage costs). Each holds every other assumption fixed.</p><h3>Unit economics</h3><p>Usage-based cost = cost per unit × annual volume × adoption × ramp × benefit growth, so it starts with usage and is never charged during a rollout delay. Fixed running costs are unchanged. Steady-state cost per unit = (fixed running costs + usage cost) ÷ (volume × adoption); benefit per unit uses the cash benefit case. The example projects keep their reference compute costs as fixed costs, and their volumes are illustrative.</p><h3>Readiness and compliance</h3><p>Data readiness, integration, vendor dependency and team capacity are rated low, medium or high risk. Two or more high risks → Not ready; one high or two or more medium → At risk; anything unassessed → Incomplete; otherwise Ready. Readiness informs the decision but does not change the recommendation. Security review is always required, legal & privacy review is required for personal data, and model risk review for high-risk AI. A pilot or production project missing a required approval is Blocked and recommended for intervention; an idea is Pending.</p><h3>Reference payback is shown separately</h3><p>The reference uses (implementation + first-year operating costs) ÷ (annual direct savings + productivity − annual operating costs), excluding indirect gains. This simplified ratio is available in project detail. It ignores actual ramp and adoption and counts first-year operating costs in the numerator as well as the annual net benefit denominator. Our primary payback uses the monthly cash schedule. The reference also contains conflicting example payback summaries, so they are not copied as validated outputs.</p><h3>Health signals and decision rules</h3><p>Reference adoption alerts: below 40% after three months → monitor; below 20% after six months → red flag requiring a recovery plan review. Two yellow signals → investigate; two red → escalate. Application policy additionally investigates any single red. Pipeline thresholds (98% watch, below 95% red) are configurable product assumptions represented here as fixed demo policy. Accuracy is yellow when below its project target and flat or declining. Missing sponsor is red; limited engagement is yellow.</p><p>Intervene when evidence is incomplete, required approvals are missing, or health requires investigation/escalation; otherwise rework when NPV ≤ 0, scale a production investment with ≥ 80% adoption and positive NPV, or continue. These deterministic recommendations support human judgment. They are not autonomous funding decisions.</p><h3>Scope and limitations</h3><p>USD, nominal, before-tax estimates. No depreciation tax shield, working capital, terminal value, financing, shared infrastructure savings, project dependencies, or budget optimization. Portfolio totals assume additive, independent benefits and costs; check overlap before approval. Data is saved only in this browser. There is no company login, shared database, or live telemetry connection. Export captures assumptions and monthly results for review.</p></article>`;
+  return `<article class="panel method"><div class="eyebrow">MODEL TRANSPARENCY</div><h2>Built for a business case you can defend.</h2><p>The supplied “Measure and demonstrate AI business value” document informs the four-part value framework, stakeholder metrics, baseline evidence, and early warning indicators. Its learning exercises are reference content, not instructions to this application.</p><h3>Four parts of AI value</h3><ul><li><b>Direct savings:</b> expenses reduced or avoided. Do not also count the same labor as recovered capacity.</li><li><b>Indirect gains:</b> retention, quality, revenue, or reduced complaints. Only the explicitly cash-qualified share enters the financial case.</li><li><b>Productivity:</b> hours recovered × loaded hourly rate × realization. Reported separately; included only when the capacity option is enabled.</li><li><b>Full costs:</b> build, data preparation, training, inference compute, storage, maintenance, and human oversight. Include integration and governance spend in the relevant cost fields.</li></ul><h3>Monthly cash flow model</h3><p>Implementation, data preparation, and training are paid at month zero. Operating costs begin in month one, including during rollout delays. Benefits begin after the project delay plus scenario delay and ramp linearly to full production over the entered ramp months. Benefits are multiplied by adoption and the scenario benefit factor. Yearly benefit and cost growth apply at each twelve-month boundary.</p><h3>Capital budgeting conventions</h3><p><b>NPV:</b> − initial capital + Σ monthly net benefit ÷ (1 + annual discount rate)<sup>month/12</sup>. <b>IRR:</b> the monthly rate that makes NPV zero, annualized as (1 + monthly IRR)<sup>12</sup> − 1. N/A means no unique conventional IRR, no positive inflow, or no root within the search bounds. <b>Payback:</b> first monthly cumulative cash crossing, with linear interpolation. Discounted payback uses discounted monthly flows. Returns beyond the horizon are shown explicitly.</p><p><b>ROI (total cost basis):</b> (horizon benefits − horizon costs) ÷ horizon costs. <b>Capital ROI:</b> the same net benefit ÷ initial capital. ROI on total cost basis is a headline portfolio and project metric; capital ROI appears in each project's cash-flow view. IRR above 100% is summarized as “>100%” in the portfolio table because small initial capital makes it unstable for ranking; the exact value is in project detail and on hover. The reference's capital deployed convention includes first-year operating costs; the tool labels its initial capital basis separately.</p><h3>Funding, risk and break-even</h3><p><b>Year-1 funding request:</b> initial capital + the first twelve months of scheduled running costs. It is a budgeting figure; it does not change NPV, IRR or payback, which keep one-time costs at month 0 and running costs in the month they occur. <b>Total cost of ownership:</b> initial capital + all running costs over the horizon, undiscounted. <b>Risk-adjusted NPV:</b> probability of success × NPV − (1 − probability) × initial capital, with editable probabilities by stage (defaults: Idea 30%, Pilot 60%, Production 90%). This simplification assumes a failed project loses its initial capital and stops. <b>Break-even:</b> NPV is linear in each driver, so the tool solves it directly. Estimated benefits must reach (initial capital + PV of all running costs) ÷ PV of benefits. Costs can rise by PV of benefits ÷ (initial capital + PV of costs) − 1. Adoption must reach current adoption × (initial capital + PV of fixed costs) ÷ (PV of benefits − PV of usage costs). Each holds every other assumption fixed.</p><h3>Unit economics</h3><p>Usage-based cost = cost per unit × annual volume × adoption × ramp × benefit growth, so it starts with usage and is never charged during a rollout delay. Fixed running costs are unchanged. Steady-state cost per unit = (fixed running costs + usage cost) ÷ (volume × adoption); benefit per unit uses the cash benefit case. The example projects keep their reference compute costs as fixed costs, and their volumes are illustrative.</p><h3>Readiness and compliance</h3><p>Data readiness, integration, vendor dependency and team capacity are rated low, medium or high risk. Two or more high risks → Not ready; one high or two or more medium → At risk; anything unassessed → Incomplete; otherwise Ready. Readiness informs the decision but does not change the recommendation. Security review is always required, legal & privacy review is required for personal data, and model risk review for high-risk AI. A pilot or production project missing a required approval is Blocked and recommended for intervention; an idea is Pending.</p><h3>Reference payback is shown separately</h3><p>The reference uses (implementation + first-year operating costs) ÷ (annual direct savings + productivity − annual operating costs), excluding indirect gains. This simplified ratio is available in project detail. It ignores actual ramp and adoption and counts first-year operating costs in the numerator as well as the annual net benefit denominator. Our primary payback uses the monthly cash schedule. The reference also contains conflicting example payback summaries, so they are not copied as validated outputs.</p><h3>Health signals and decision rules</h3><p>Reference adoption alerts: below 40% after three months → monitor; below 20% after six months → red flag requiring a recovery plan review. Two yellow signals → investigate; two red → escalate. Application policy additionally investigates any single red. Pipeline thresholds (98% watch, below 95% red) are configurable product assumptions represented here as fixed demo policy. Accuracy is yellow when below its project target and flat or declining. Missing sponsor is red; limited engagement is yellow.</p><p>Intervene when evidence is incomplete, required approvals are missing, or health requires investigation/escalation; otherwise rework when NPV ≤ 0, scale a production investment with ≥ 80% adoption and positive NPV, or continue. These deterministic recommendations support human judgment. They are not autonomous funding decisions.</p><h3>Shared tech team</h3><p>The tech team is a shared pool by role (default 25 people: 8 ML engineers, 7 data engineers, 6 software engineers, 4 MLOps & platform), each with an editable loaded annual cost. Every project states the people it needs by role to build and the full-time equivalents needed to run it. <b>Coverage</b> is assigned ÷ needed for the most short-staffed role. Time to full benefit (project delay and ramp; scenario delay is unchanged) is multiplied by 1 ÷ coverage when short, by 1 ÷ √coverage when every role is over-staffed (never less than half), and becomes never when a needed role has nobody. <b>Team cost</b> is charged monthly: the full assigned team until benefits reach full ramp, then the run-support share (run FTE ÷ assigned, capped at all assigned). It counts as a fixed running cost, so it flows into NPV, payback, Year-1 funding, break-even and unit economics. Example cost fields are treated as external and vendor costs, so internal people are not counted twice. Bench people and people left assigned after a build are not charged to projects; the Tech team page reports them separately so the whole team cost is visible. The charge can be switched off to compare; staffing delays still apply. Health adds a team staffing signal: build coverage, or run coverage once in production (below 50% red, below 100% yellow).</p><h3>Scope and limitations</h3><p>USD, nominal, before-tax estimates. No depreciation tax shield, working capital, terminal value, financing, shared infrastructure savings, project dependencies, or budget optimization. Portfolio totals assume additive, independent benefits and costs; check overlap before approval. Data is saved only in this browser. There is no company login, shared database, or live telemetry connection. Export captures assumptions and monthly results for review.</p></article>`;
+}
+// Shared tech team. People assigned to excluded projects still count as assigned.
+function roleUsage() {
+  return state.settings.team.map(r => {
+    const assigned = state.projects.reduce((v, p) => v + (p.alloc?.[r.id] || 0), 0);
+    return { ...r, assigned, available: r.headcount - assigned };
+  });
+}
+// Moves up to count people of one role between a project and another project or the bench.
+function moveTeam(role, from, to, count) {
+  if (from === to) return 0;
+  const usage = roleUsage().find(r => r.id === role),
+    src = from === 'bench' ? null : state.projects.find(p => p.id === from),
+    dst = to === 'bench' ? null : state.projects.find(p => p.id === to),
+    n = Math.min(count, src ? src.alloc[role] || 0 : usage.available);
+  if (n <= 0) return 0;
+  if (src) src.alloc[role] -= n;
+  if (dst) dst.alloc[role] = (dst.alloc[role] || 0) + n;
+  return n;
+}
+const months = v => (v === Infinity ? 'Never' : +v.toFixed(1) + ' mo');
+function teamHints(roles, res) {
+  const hints = [];
+  for (const r of roles) {
+    const short = res.filter(x => (x.p.need?.[r.id] || 0) > (x.p.alloc?.[r.id] || 0)),
+      spare = res.filter(x => (x.p.alloc?.[r.id] || 0) > (x.p.need?.[r.id] || 0));
+    if (!short.length) continue;
+    const names = short.map(x => esc(x.p.name)).join(', ');
+    if (r.available > 0)
+      hints.push(`${esc(r.name)}: ${r.available} on the bench while ${names} ${short.length === 1 ? 'is' : 'are'} short.`);
+    else if (spare.length)
+      hints.push(`${names} ${short.length === 1 ? 'is' : 'are'} short of ${esc(r.name)}; ${spare.map(x => esc(x.p.name)).join(', ')} ${spare.length === 1 ? 'has' : 'have'} more than needed.`);
+    else hints.push(`Not enough ${esc(r.name)}: ${names} ${short.length === 1 ? 'is' : 'are'} short and none are free.`);
+  }
+  for (const x of res)
+    if (x.p.stage === 'Production' && x.r.team.runCoverage > 1.5)
+      hints.push(`${esc(x.p.name)} is live with ${x.r.team.assigned} people for ${x.p.runNeed} run FTE; extra people could move.`);
+  return hints;
+}
+function team() {
+  const s = state.settings,
+    roles = roleUsage(),
+    res = results(),
+    factor = s.costFactor / 100,
+    people = roles.reduce((v, r) => v + r.headcount, 0),
+    assigned = roles.reduce((v, r) => v + r.assigned, 0),
+    annual = roles.reduce((v, r) => v + r.headcount * r.cost, 0) * factor,
+    charged = res.reduce((v, x) => v + x.r.yearly[0].team, 0),
+    bench = roles.reduce((v, r) => v + Math.max(0, r.available) * r.cost, 0) * factor,
+    idle = Math.max(0, annual - charged - bench),
+    hints = teamHints(roles, res),
+    option = (value, label, selected) => `<option value="${esc(value)}" ${selected ? 'selected' : ''}>${label}</option>`,
+    places = sel => option('bench', 'Bench', sel === 'bench') + state.projects.map(p => option(p.id, esc(p.name), sel === p.id)).join('');
+  const cell = (p, r, rr) => {
+    const a = p.alloc?.[r.id] || 0,
+      n = p.need?.[r.id] || 0,
+      key = `${esc(p.id)}|${r.id}`,
+      cls = n && a < n ? 'short' : a > n ? 'over' : n ? 'ok' : '';
+    return `<td><div class="stepper ${cls}"><button type="button" data-step-alloc="${key}|-1" aria-label="Move one of ${esc(r.name)} off ${esc(p.name)}" ${a ? '' : 'disabled'}>−</button><span>${a}<small>/${n}</small></span><button type="button" data-step-alloc="${key}|1" aria-label="Add one of ${esc(r.name)} to ${esc(p.name)}" ${rr.available > 0 ? '' : 'disabled'}>+</button></div></td>`;
+  };
+  return `<div class="metrics"><div class="metric"><div class="metric-top">Tech team</div><strong>${people}</strong><small>${roles.length} roles · shared across projects</small></div><div class="metric"><div class="metric-top">Assigned</div><strong>${assigned}</strong><small>${people - assigned} on the bench</small></div><div class="metric"><div class="metric-top">Annual team cost</div><strong>${short(annual)}</strong><small>Loaded cost of all ${people} people</small></div><div class="metric"><div class="metric-top">Charged to projects, year 1</div><strong>${short(charged)}</strong><small>${s.teamCost ? `Bench ${short(bench)} · idle after build ${short(idle)}` : 'Team cost switched off'}</small></div></div>
+<div class="team-grid"><div class="panel"><h2>Team pools</h2><p class="table-note" style="margin:4px 0 12px">Headcount cannot go below the people already assigned.</p><div class="table-wrap"><table><thead><tr><th>ROLE</th><th>PEOPLE</th><th>LOADED COST / YR</th><th>ASSIGNED</th><th>BENCH</th></tr></thead><tbody>${roles.map(r => `<tr><td>${esc(r.name)}</td><td><input class="mini" data-headcount="${r.id}" type="number" min="${r.assigned}" max="500" step="1" value="${r.headcount}" aria-label="${esc(r.name)} headcount"></td><td><input class="mini wide" data-rolecost="${r.id}" type="number" min="0" max="5000000" step="any" value="${r.cost}" aria-label="${esc(r.name)} loaded annual cost"></td><td>${r.assigned}</td><td>${r.available}</td></tr>`).join('')}</tbody></table></div><label class="switch"><input id="team-cost" type="checkbox" ${s.teamCost ? 'checked' : ''}> Charge team cost to project business cases</label></div>
+<div class="panel"><h2>Move people</h2><form id="move-form" class="move-form"><label>Role<select name="role">${roles.map(r => option(r.id, esc(r.name), false)).join('')}</select></label><label>Number<input name="count" type="number" min="1" max="50" step="1" value="1" required></label><label>From<select name="from">${places('bench')}</select></label><label>To<select name="to">${places(state.projects[0]?.id)}</select></label><button class="btn primary">Move</button></form>${hints.length ? `<ul class="team-hints">${hints.map(h => `<li>${h}</li>`).join('')}</ul>` : '<p class="table-note">Every project has the people it needs.</p>'}</div></div>
+<div class="panel table-panel"><div class="table-head"><div><h2>Allocation by project</h2><p>Assigned / needed for the build. Use − and + to move people to and from the bench.</p></div></div><div class="table-wrap"><table class="team-table"><thead><tr><th>PROJECT</th>${roles.map(r => `<th>${esc(r.name.toUpperCase())}</th>`).join('')}<th>STAFFING</th><th>TIME TO FULL BENEFIT</th><th>TEAM COST (${s.years} YRS)</th><th>NPV</th></tr></thead><tbody>${
+    res.map(({ p, r }) => {
+      const t = r.team,
+        staffing = !t.planned ? badge('No team need', 'blue') : t.stalled ? badge('Stalled: no ' + t.bottleneck, 'red') : badge(Math.round(t.coverage * 100) + '%', t.coverage < 0.5 ? 'red' : t.coverage < 1 ? 'amber' : 'green'),
+        change = t.monthsToFull - t.baseMonthsToFull;
+      return `<tr><td><button class="name-button" data-project="${esc(p.id)}"><strong>${esc(p.name)}</strong><small>${esc(p.stage)}${state.excluded.includes(p.id) ? ' · excluded from portfolio' : ''} · run ${p.runNeed || 0} FTE</small></button></td>${roles.map(rr => cell(p, rr, rr)).join('')}<td>${staffing}</td><td><span class="${change > 0.05 ? 'late' : change < -0.05 ? 'early' : ''}">${months(t.baseMonthsToFull)} → ${months(t.monthsToFull)}</span></td><td>${short(t.totalCost)}</td><td><strong style="color:${r.npv > 0 ? 'var(--green)' : 'var(--red)'}">${short(r.npv)}</strong></td></tr>`;
+    }).join('') || '<tr><td colspan="9" class="empty">No automations yet.</td></tr>'
+  }</tbody></table></div><div class="table-foot"><span>Coverage = the most short-staffed role. Short → slower (time × 1 ÷ coverage). Over-staffed → faster with diminishing returns (time ÷ √coverage, at most twice as fast).</span><span>Full team charged while building, run FTE after.</span></div></div>`;
 }
 function render() {
   const labels = {
@@ -372,6 +443,11 @@ function render() {
       'Evidence & health',
       'Look beyond the return.',
       'Baselines, adoption, and the early signals that keep the value case honest.',
+    ],
+    team: [
+      'Tech team',
+      'Put people where the value is.',
+      'Move the shared tech team between projects and see the effect on cost, timing and value.',
     ],
     method: [
       'Methodology',
@@ -391,7 +467,7 @@ function render() {
   document
     .querySelectorAll('[data-scenario]')
     .forEach(b => b.classList.toggle('selected', b.dataset.scenario === state.scenario));
-  $('#view').innerHTML = { overview, scenarios, evidence, method }[state.view]();
+  $('#view').innerHTML = { overview, scenarios, team, evidence, method }[state.view]();
   bindView();
   save();
   if (selected && !$('#detail').hidden) {
@@ -456,6 +532,50 @@ function bindView() {
         render();
       }),
   );
+  document.querySelectorAll('[data-step-alloc]').forEach(
+    b =>
+      (b.onclick = () => {
+        const key = b.dataset.stepAlloc,
+          [id, role, step] = key.split('|');
+        if (+step > 0) moveTeam(role, 'bench', id, 1);
+        else moveTeam(role, id, 'bench', 1);
+        render();
+        const again = document.querySelector(`[data-step-alloc="${CSS.escape(key)}"]`);
+        (again && !again.disabled ? again : document.querySelector(`[data-step-alloc="${CSS.escape(id + '|' + role + '|' + -step)}"]`))?.focus();
+      }),
+  );
+  document.querySelectorAll('[data-headcount],[data-rolecost]').forEach(
+    i =>
+      (i.onchange = () => {
+        if (i.value === '' || !i.checkValidity()) {
+          i.classList.add('invalid');
+          i.reportValidity();
+          return;
+        }
+        const r = state.settings.team.find(x => x.id === (i.dataset.headcount || i.dataset.rolecost));
+        r[i.dataset.headcount ? 'headcount' : 'cost'] = +i.value;
+        render();
+      }),
+  );
+  $('#team-cost')?.addEventListener('change', e => {
+    state.settings.teamCost = e.target.checked;
+    render();
+  });
+  $('#move-form')?.addEventListener('submit', e => {
+    e.preventDefault();
+    const f = new FormData(e.target),
+      role = state.settings.team.find(r => r.id === f.get('role')),
+      name = id => (id === 'bench' ? 'the bench' : state.projects.find(p => p.id === id)?.name),
+      moved = moveTeam(f.get('role'), f.get('from'), f.get('to'), +f.get('count'));
+    toast(
+      moved
+        ? `Moved ${moved} ${moved === 1 ? 'person' : 'people'} (${role.name}) from ${name(f.get('from'))} to ${name(f.get('to'))}`
+        : f.get('from') === f.get('to')
+          ? 'Choose a different destination'
+          : `No ${role.name} available on ${name(f.get('from'))}`,
+    );
+    if (moved) render();
+  });
   $('#scope')?.addEventListener('change', e => {
     state.scenarioScope = e.target.value;
     render();
@@ -497,7 +617,7 @@ function detailResults(p) {
 }
 function detailCash(p) {
   const r = calculate(p, state.settings);
-  return `<h3>Cash flow audit</h3><div class="table-wrap"><table><thead><tr><th>YEAR</th><th>EST. BENEFITS</th><th>OP. COSTS</th><th>NET</th></tr></thead><tbody><tr><td>Start</td><td>—</td><td>${short(r.cap)} setup</td><td>${short(-r.cap)}</td></tr>${r.yearly.map(y => `<tr><td>${y.year}</td><td>${short(y.benefit)}</td><td>${short(y.cost)}</td><td>${short(y.net)}</td></tr>`).join('')}</tbody></table></div><p class="evidence">Year-1 funding request: <b>${money(r.fundingRequest)}</b> · Total cost of ownership (${state.settings.years} yrs): <b>${money(r.totalCosts)}</b><br>Break-even: estimated benefits at <b>${r.breakEven.benefits === null ? 'N/A' : Math.round(r.breakEven.benefits * 100) + '%'}</b> of estimate · adoption <b>${r.breakEven.adoption === null ? 'N/A' : r.breakEven.adoption > 100 ? 'not reachable' : r.breakEven.adoption.toFixed(0) + '%'}</b> · cost headroom <b>${r.breakEven.costHeadroom === null ? 'N/A' : Math.round(r.breakEven.costHeadroom * 100) + '%'}</b><br>Unit economics (steady state): <b>${r.unit ? `${Math.round(r.unit.volume).toLocaleString('en-US')} ${esc(p.volumeUnit)}/yr · cost ${unitMoney(r.unit.cost)} · benefit ${unitMoney(r.unit.benefit)} · net ${unitMoney(r.unit.net)} per unit` : 'set annual volume to calculate'}</b><br>Delivery readiness: <b>${r.readiness.status}</b> · Compliance: <b>${r.compliance.status}${r.compliance.missing.length ? ' (' + esc(r.compliance.missing.join(', ')) + ')' : ''}</b><br>ROI (total costs): <b>${pct(r.roi)}</b> · Capital ROI (initial capital): <b>${r.cap ? pct(r.capitalROI) : 'N/A'}</b><br>Discounted payback: <b>${pb(r.discountedPayback)}</b><br>Reference simplified payback: <b>${p.direct + r.capacity - operating(p) > 0 ? pb(r.referencePayback) : 'Not reached'}</b><br>Recovered capacity proxy, before adoption: <b>${money(r.capacity)}/year</b></p>`;
+  return `<h3>Cash flow audit</h3><div class="table-wrap"><table><thead><tr><th>YEAR</th><th>EST. BENEFITS</th><th>OP. COSTS</th><th>NET</th></tr></thead><tbody><tr><td>Start</td><td>—</td><td>${short(r.cap)} setup</td><td>${short(-r.cap)}</td></tr>${r.yearly.map(y => `<tr><td>${y.year}</td><td>${short(y.benefit)}</td><td>${short(y.cost)}</td><td>${short(y.net)}</td></tr>`).join('')}</tbody></table></div><p class="evidence">Year-1 funding request: <b>${money(r.fundingRequest)}</b> · Total cost of ownership (${state.settings.years} yrs): <b>${money(r.totalCosts)}</b><br>Break-even: estimated benefits at <b>${r.breakEven.benefits === null ? 'N/A' : Math.round(r.breakEven.benefits * 100) + '%'}</b> of estimate · adoption <b>${r.breakEven.adoption === null ? 'N/A' : r.breakEven.adoption > 100 ? 'not reachable' : r.breakEven.adoption.toFixed(0) + '%'}</b> · cost headroom <b>${r.breakEven.costHeadroom === null ? 'N/A' : Math.round(r.breakEven.costHeadroom * 100) + '%'}</b><br>Tech team: <b>${r.team.planned ? (r.team.stalled ? 'stalled, no ' + esc(r.team.bottleneck) : Math.round(r.team.coverage * 100) + '% staffed') : 'no team need entered'}</b> · ${r.team.stalled ? '<b>benefits never start</b>' : `full benefit in <b>${months(r.team.monthsToFull)}</b>`} (plan ${months(r.team.baseMonthsToFull)}) · team cost <b>${money(r.team.totalCost)}</b><br>Unit economics (steady state): <b>${r.unit ? `${Math.round(r.unit.volume).toLocaleString('en-US')} ${esc(p.volumeUnit)}/yr · cost ${unitMoney(r.unit.cost)} · benefit ${unitMoney(r.unit.benefit)} · net ${unitMoney(r.unit.net)} per unit` : 'set annual volume to calculate'}</b><br>Delivery readiness: <b>${r.readiness.status}</b> · Compliance: <b>${r.compliance.status}${r.compliance.missing.length ? ' (' + esc(r.compliance.missing.join(', ')) + ')' : ''}</b><br>ROI (total costs): <b>${pct(r.roi)}</b> · Capital ROI (initial capital): <b>${r.cap ? pct(r.capitalROI) : 'N/A'}</b><br>Discounted payback: <b>${pb(r.discountedPayback)}</b><br>Reference simplified payback: <b>${p.direct + r.capacity - operating(p) > 0 ? pb(r.referencePayback) : 'Not reached'}</b><br>Recovered capacity proxy, before adoption: <b>${money(r.capacity)}/year</b></p>`;
 }
 function openDetail(id) {
   selected = id;
@@ -505,7 +625,7 @@ function openDetail(id) {
   if (!p) return;
   $('#detail').hidden = false;
   $('#detail').innerHTML =
-    `<div class="detail-head"><div><div class="eyebrow">LIVE BUSINESS CASE</div><h2>${esc(p.name)}</h2></div><button class="close" id="close-detail" aria-label="Close project">×</button></div><p class="description">${esc(p.description)}</p><div id="detail-results">${detailResults(p)}</div><p class="detail-note">Illustrative assumptions. Changes update all portfolio views immediately and save in this browser.</p><h3>Investment & full operating costs</h3><div class="fields">${specs.slice(0, 7).map(fieldMarkup).join('')}</div><h3>Estimated benefits & delivery assumptions</h3><div class="fields">${specs.slice(7, 18).map(fieldMarkup).join('')}</div><h3>Usage & unit economics</h3><div class="fields">${fieldMarkup(['volume', 'Annual volume at full adoption', 0, 1e12])}<label>Volume unit<input data-text="volumeUnit" value="${esc(p.volumeUnit)}" maxlength="40"></label>${fieldMarkup(['unitCost', 'Usage-based cost per unit ($)', 0, 1e6])}</div><h3>Readiness & compliance</h3><div class="fields">${[
+    `<div class="detail-head"><div><div class="eyebrow">LIVE BUSINESS CASE</div><h2>${esc(p.name)}</h2></div><button class="close" id="close-detail" aria-label="Close project">×</button></div><p class="description">${esc(p.description)}</p><div id="detail-results">${detailResults(p)}</div><p class="detail-note">Illustrative assumptions. Changes update all portfolio views immediately and save in this browser.</p><h3>Investment & full operating costs</h3><div class="fields">${specs.slice(0, 7).map(fieldMarkup).join('')}</div><h3>Estimated benefits & delivery assumptions</h3><div class="fields">${specs.slice(7, 18).map(fieldMarkup).join('')}</div><h3>Tech team</h3><div class="fields">${state.settings.team.map(r => `<label>${esc(r.name)} needed<input data-need="${r.id}" type="number" min="0" max="100" step="1" value="${p.need?.[r.id] || 0}"><small class="field-error" hidden></small></label>`).join('')}${fieldMarkup(['runNeed', 'Run support after launch (FTE)', 0, 100])}</div><p class="detail-note">Assigned now: ${state.settings.team.map(r => `${esc(r.name)} ${p.alloc?.[r.id] || 0}`).join(' · ')}. <button type="button" class="text-btn" data-go-team>Move people on the Tech team page →</button></p><h3>Usage & unit economics</h3><div class="fields">${fieldMarkup(['volume', 'Annual volume at full adoption', 0, 1e12])}<label>Volume unit<input data-text="volumeUnit" value="${esc(p.volumeUnit)}" maxlength="40"></label>${fieldMarkup(['unitCost', 'Usage-based cost per unit ($)', 0, 1e6])}</div><h3>Readiness & compliance</h3><div class="fields">${[
       ['dataReadiness', 'Data readiness risk'],
       ['integration', 'Integration complexity'],
       ['vendorRisk', 'Vendor dependency'],
@@ -567,14 +687,39 @@ function openDetail(id) {
           updateDetail(p);
         }),
     );
+  $('#detail')
+    .querySelectorAll('[data-need]')
+    .forEach(
+      i =>
+        (i.oninput = () => {
+          const error = i.parentElement.querySelector('.field-error'),
+            bad = i.value === '' || !i.checkValidity();
+          i.classList.toggle('invalid', bad);
+          error.hidden = !bad;
+          if (bad) {
+            error.textContent = `${i.value === '' ? 'Enter a value.' : i.validationMessage} Still using ${p.need[i.dataset.need] || 0}.`;
+            return;
+          }
+          p.need = { ...p.need, [i.dataset.need]: +i.value };
+          updateDetail(p);
+        }),
+    );
+  $('#detail').querySelector('[data-go-team]').onclick = () => {
+    state.view = 'team';
+    render();
+  };
   $('#duplicate').onclick = () => {
-    const copy = structuredClone(p);
+    const copy = structuredClone(p),
+      roles = roleUsage();
     copy.id = crypto.randomUUID();
     copy.name += ' (comparison)';
+    // A copy can only take people who are free; the shortfall shows up as slower delivery.
+    for (const r of roles) copy.alloc[r.id] = Math.min(copy.alloc[r.id] || 0, Math.max(0, r.available));
+    const shortBy = roles.reduce((v, r) => v + (p.alloc[r.id] || 0) - copy.alloc[r.id], 0);
     state.projects.push(copy);
     render();
     openDetail(copy.id);
-    toast('Comparison case added');
+    toast(shortBy ? `Comparison case added; ${shortBy} people were not free to assign` : 'Comparison case added');
   };
   $('#remove').onclick = () => {
     if (!confirm(`Remove ${p.name} from this browser's portfolio?`)) return;
@@ -635,6 +780,11 @@ const wizardBlank = {
   pipeline: '',
   accuracy: '',
   accuracyTarget: '',
+  need_ml: 0,
+  need_data: 0,
+  need_sw: 0,
+  need_ops: 0,
+  runNeed: 0,
   trend: 0,
   evidence: '',
   volume: '',
@@ -779,6 +929,16 @@ const wizardSteps = [
         'Months before benefits start',
         'number',
         { min: 0, max: 60, step: 1, help: 'Running costs are still charged.' },
+      ],
+      ['need_ml', 'ML engineers needed to build', 'number', { min: 0, max: 100, step: 1 }],
+      ['need_data', 'Data engineers needed', 'number', { min: 0, max: 100, step: 1 }],
+      ['need_sw', 'Software engineers needed', 'number', { min: 0, max: 100, step: 1 }],
+      ['need_ops', 'MLOps & platform needed', 'number', { min: 0, max: 100, step: 1 }],
+      [
+        'runNeed',
+        'Run support after launch (FTE)',
+        'number',
+        { min: 0, max: 100, help: 'People kept on once benefits reach full ramp.' },
       ],
     ],
   },
@@ -936,7 +1096,7 @@ function wizardProject(d) {
   const n = k => (d[k] === '' || d[k] == null ? 0 : +d[k]),
     t = k => String(d[k] ?? '').trim();
   const p = {
-    ...projectDefaults,
+    ...structuredClone(projectDefaults),
     name: t('name'),
     team: t('team'),
     owner: t('owner'),
@@ -987,6 +1147,12 @@ function wizardProject(d) {
     p[k] = n(k);
   p.ramp = Math.max(1, p.ramp);
   p.computeBudget = d.computeBudget === '' ? p.compute : n('computeBudget');
+  // Needed people are assigned from whoever is on the bench now.
+  p.runNeed = n('runNeed');
+  for (const r of roleUsage()) {
+    p.need[r.id] = n('need_' + r.id);
+    p.alloc[r.id] = Math.min(p.need[r.id], Math.max(0, r.available));
+  }
   p.after = d.after === '' ? p.before : n('after');
   const unmeasured = [];
   p.pipeline = d.pipeline === '' ? (unmeasured.push('data pipeline'), 100) : n('pipeline');
@@ -1053,8 +1219,9 @@ function wizardReview() {
     p.unitCost > 0 &&
       !p.volume &&
       'A usage-based cost is entered without annual volume, so it has no effect.',
+    r.team.planned && r.team.stalled && `No ${r.team.bottleneck} are free, so benefits never start. Free people on the Tech team page.`, r.team.planned && !r.team.stalled && r.team.coverage < 1 && `Only ${r.team.assigned} of ${r.team.needed} needed people are free, so full benefit takes ${months(r.team.monthsToFull)} instead of ${months(r.team.baseMonthsToFull)}.`, !r.team.planned && 'No tech team need entered, so team cost and staffing delays are not modelled.',
   ].filter(Boolean);
-  return `<div class="wizard-review">${section('The idea', 0, [row('Automation', esc(p.name)), row('Owner', `${esc(p.owner)} · ${esc(p.team)}`), row('Stage', `${esc(p.stage)} · ${p.age} months live`)])}${section('Costs', 1, [row('Initial capital', money(r.cap)), row('Annual running costs', money(r.op)), row('Year-1 funding request', money(r.fundingRequest)), row('Usage-based cost', p.unitCost && p.volume ? `${unitMoney(p.unitCost)} per unit · ${Math.round(p.volume).toLocaleString('en-US')} ${esc(p.volumeUnit)}/yr` : 'None')])}${section('Estimated benefits', 3, [row('Direct savings', money(p.direct) + '/yr'), row('Cash share of indirect gains', money((p.indirect * p.indirectCash) / 100) + '/yr'), row('Capacity value', `${money(r.capacity)}/yr ${state.settings.capacity ? '(included)' : '(reported, not in cash)'}`)])}${section('Rollout', 4, [row('Adoption', p.adoption + '%'), row('Ramp', p.ramp + (p.ramp === 1 ? ' month' : ' months')), row('Delay', p.delay + (p.delay === 1 ? ' month' : ' months'))])}${section('Readiness & compliance', 5, [row('Delivery readiness', esc(r.readiness.status)), row('Compliance', esc(r.compliance.status) + (r.compliance.missing.length ? ' · ' + esc(r.compliance.missing.join(', ')) : '')), row('Data · AI risk', `${esc(p.dataSensitivity)} · ${esc(p.aiRisk)}`)])}${section('Evidence', 6, [row('KPI', `${esc(p.kpi)}: ${p.before} → ${p.target} ${esc(p.unit)}`), row('Baseline', esc(p.baseline)), row('Health', `${r.health.action} · sponsor ${esc(p.sponsor)}`)])}<section class="review-result"><h3>Result</h3><dl>${row('NPV', short(r.npv))}${row('Payback', pb(r.payback))}${row('ROI', pct(r.roi))}${row('IRR', pct(r.irr))}${row('Risk-adjusted NPV', short(r.riskAdjustedNPV))}${row('Break-even benefits', r.breakEven.benefits === null ? 'N/A' : Math.round(r.breakEven.benefits * 100) + '% of estimate')}${row('Recommendation', recBadge(r.recommendation))}</dl></section>${warnings.length ? `<ul class="review-warnings">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>` : ''}</div>`;
+  return `<div class="wizard-review">${section('The idea', 0, [row('Automation', esc(p.name)), row('Owner', `${esc(p.owner)} · ${esc(p.team)}`), row('Stage', `${esc(p.stage)} · ${p.age} months live`)])}${section('Costs', 1, [row('Initial capital', money(r.cap)), row('Annual running costs', money(r.op)), row('Year-1 funding request', money(r.fundingRequest)), row('Usage-based cost', p.unitCost && p.volume ? `${unitMoney(p.unitCost)} per unit · ${Math.round(p.volume).toLocaleString('en-US')} ${esc(p.volumeUnit)}/yr` : 'None')])}${section('Estimated benefits', 3, [row('Direct savings', money(p.direct) + '/yr'), row('Cash share of indirect gains', money((p.indirect * p.indirectCash) / 100) + '/yr'), row('Capacity value', `${money(r.capacity)}/yr ${state.settings.capacity ? '(included)' : '(reported, not in cash)'}`)])}${section('Rollout', 4, [row('Tech team', r.team.planned ? `${r.team.assigned} of ${r.team.needed} needed are free to assign · ${r.team.stalled ? 'benefits never start' : 'full benefit in ' + months(r.team.monthsToFull)}` : 'No team need entered'), row('Adoption', p.adoption + '%'), row('Ramp', p.ramp + (p.ramp === 1 ? ' month' : ' months')), row('Delay', p.delay + (p.delay === 1 ? ' month' : ' months'))])}${section('Readiness & compliance', 5, [row('Delivery readiness', esc(r.readiness.status)), row('Compliance', esc(r.compliance.status) + (r.compliance.missing.length ? ' · ' + esc(r.compliance.missing.join(', ')) : '')), row('Data · AI risk', `${esc(p.dataSensitivity)} · ${esc(p.aiRisk)}`)])}${section('Evidence', 6, [row('KPI', `${esc(p.kpi)}: ${p.before} → ${p.target} ${esc(p.unit)}`), row('Baseline', esc(p.baseline)), row('Health', `${r.health.action} · sponsor ${esc(p.sponsor)}`)])}<section class="review-result"><h3>Result</h3><dl>${row('NPV', short(r.npv))}${row('Payback', pb(r.payback))}${row('ROI', pct(r.roi))}${row('IRR', pct(r.irr))}${row('Risk-adjusted NPV', short(r.riskAdjustedNPV))}${row('Break-even benefits', r.breakEven.benefits === null ? 'N/A' : Math.round(r.breakEven.benefits * 100) + '% of estimate')}${row('Recommendation', recBadge(r.recommendation))}</dl></section>${warnings.length ? `<ul class="review-warnings">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>` : ''}</div>`;
 }
 function renderWizard() {
   const s = wizardSteps[wiz.step],
@@ -1148,7 +1315,7 @@ $('#reset').onclick = () => {
   if (!confirm('Reset all local changes and restore the five examples?')) return;
   state = {
     projects: structuredClone(examples),
-    settings: { ...defaults },
+    settings: structuredClone(defaults),
     excluded: [],
     view: state.view,
     scenario: 'base',

@@ -8,6 +8,14 @@ export const defaults = {
   probIdea: 30,
   probPilot: 60,
   probProduction: 90,
+  // Shared internal tech team. Loaded annual cost per person; headcount totals 25.
+  teamCost: true,
+  team: [
+    { id: 'ml', name: 'ML engineers', headcount: 8, cost: 180000 },
+    { id: 'data', name: 'Data engineers', headcount: 7, cost: 160000 },
+    { id: 'sw', name: 'Software engineers', headcount: 6, cost: 150000 },
+    { id: 'ops', name: 'MLOps & platform', headcount: 4, cost: 170000 },
+  ],
 };
 // Neutral values for fields added after the first release; used for new and previously saved projects.
 export const projectDefaults = {
@@ -23,6 +31,9 @@ export const projectDefaults = {
   securityReview: 'Not started',
   legalReview: 'Not started',
   modelRiskReview: 'Not started',
+  need: { ml: 0, data: 0, sw: 0, ops: 0 },
+  alloc: { ml: 0, data: 0, sw: 0, ops: 0 },
+  runNeed: 0,
 };
 export const examples = [
   {
@@ -76,6 +87,9 @@ export const examples = [
     securityReview: 'Approved',
     legalReview: 'Approved',
     modelRiskReview: 'Approved',
+    need: { ml: 1, data: 0, sw: 0, ops: 1 },
+    alloc: { ml: 1, data: 0, sw: 0, ops: 1 },
+    runNeed: 1.5,
     evidence:
       'Q3 2025 pilot baseline; sample scenario from reference. Validate full rollout and labor savings before approval.',
   },
@@ -130,6 +144,9 @@ export const examples = [
     securityReview: 'Approved',
     legalReview: 'Approved',
     modelRiskReview: 'In progress',
+    need: { ml: 2, data: 1, sw: 2, ops: 1 },
+    alloc: { ml: 2, data: 1, sw: 2, ops: 1 },
+    runNeed: 1.5,
     evidence:
       'Illustrative example; handle time and satisfaction metrics inspired by the reference. Annual savings need a staffing or avoided hiring plan.',
   },
@@ -184,6 +201,9 @@ export const examples = [
     securityReview: 'Approved',
     legalReview: 'Approved',
     modelRiskReview: 'Approved',
+    need: { ml: 1, data: 0, sw: 1, ops: 0 },
+    alloc: { ml: 1, data: 0, sw: 1, ops: 0 },
+    runNeed: 1,
     evidence:
       'Illustrative finance example. Direct savings represent outsourced processing and late fees; hours recovered are a separate internal team benefit.',
   },
@@ -238,6 +258,9 @@ export const examples = [
     securityReview: 'Approved',
     legalReview: 'In progress',
     modelRiskReview: 'In progress',
+    need: { ml: 2, data: 2, sw: 1, ops: 1 },
+    alloc: { ml: 2, data: 2, sw: 1, ops: 1 },
+    runNeed: 1,
     evidence:
       'Reference identifies no formal prelaunch accuracy baseline. The 61% is a provisional historical proxy; reconcile comparable SKUs, seasonality, and data feed gaps.',
   },
@@ -292,14 +315,48 @@ export const examples = [
     securityReview: 'In progress',
     legalReview: 'Not started',
     modelRiskReview: 'Not started',
+    need: { ml: 2, data: 2, sw: 1, ops: 1 },
+    alloc: { ml: 1, data: 2, sw: 1, ops: 1 },
+    runNeed: 1,
     evidence:
       'Reference: 0 failures in 6 months versus historical 4/year. This does not establish an annual zero-failure rate; validate seasonality and avoided-event attribution.',
   },
 ];
 export const setup = p => p.upfront + p.data + p.training;
 export const operating = p => p.compute + p.storage + p.maintenance + p.oversight;
-export function health(p) {
+// Staffing from the shared team. Coverage is the weakest role's assigned ÷ needed. Time to full benefit
+// stretches by 1 ÷ coverage when short, shrinks by 1 ÷ √coverage (never below half) when over-staffed,
+// and the project stalls when a needed role has nobody. Build cost is the full assigned team; once
+// benefits reach full ramp, only the run-support share stays charged.
+export function staffing(p, s = defaults) {
+  const roles = s.team || [],
+    need = p.need || {},
+    alloc = p.alloc || {},
+    needed = roles.filter(r => (need[r.id] || 0) > 0),
+    assigned = roles.reduce((v, r) => v + (alloc[r.id] || 0), 0),
+    buildCost = roles.reduce((v, r) => v + (alloc[r.id] || 0) * r.cost, 0);
+  if (!needed.length) return { planned: false, coverage: null, factor: 1, stalled: false, assigned, buildCost: 0, runCost: 0 };
+  const ratio = r => (alloc[r.id] || 0) / need[r.id],
+    weakest = needed.reduce((a, r) => (ratio(r) < ratio(a) ? r : a)),
+    coverage = ratio(weakest),
+    runNeed = p.runNeed || 0;
+  return {
+    planned: true,
+    coverage,
+    bottleneck: weakest.name,
+    factor: coverage <= 0 ? Infinity : coverage < 1 ? 1 / coverage : Math.max(0.5, 1 / Math.sqrt(coverage)),
+    stalled: coverage <= 0,
+    assigned,
+    needed: needed.reduce((v, r) => v + need[r.id], 0),
+    buildCost,
+    runCost: assigned > 0 ? buildCost * Math.min(1, runNeed / assigned) : 0,
+    runCoverage: runNeed > 0 ? assigned / runNeed : null,
+  };
+}
+export function health(p, s = defaults) {
   if (p.stage === 'Idea') return { signals: [], action: 'Not launched' };
+  const team = staffing(p, s),
+    staffed = p.stage === 'Production' && team.runCoverage !== null ? team.runCoverage : team.coverage;
   const signals = [
     {
       name: 'Adoption',
@@ -318,6 +375,15 @@ export function health(p) {
       value: p.accuracy + '% · ' + (p.trend >= 0 ? '+' : '') + p.trend + ' pp/mo',
     },
   ];
+  if (team.planned)
+    signals.push({
+      name: 'Team staffing',
+      level: staffed < 0.5 ? 2 : staffed < 1 ? 1 : 0,
+      value:
+        p.stage === 'Production' && team.runCoverage !== null
+          ? `${team.assigned} assigned · ${p.runNeed} run FTE needed`
+          : Math.round(staffed * 100) + '% of build team',
+    });
   const red = signals.filter(s => s.level === 2).length,
     yellow = signals.filter(s => s.level === 1).length;
   return {
@@ -412,19 +478,30 @@ export function calculate(p, s = defaults) {
     pvFlows = [-cap],
     yearly = [],
     cumulative = [-cap];
+  const team = staffing(p, s),
+    effDelay = team.stalled ? Infinity : p.delay * team.factor,
+    effRamp = Math.max(1, team.stalled ? p.ramp : p.ramp * team.factor),
+    fullAt = effDelay + s.delay + effRamp;
   let totalBenefits = 0,
     totalCosts = cap,
+    totalTeam = 0,
     npv = -cap,
     pvBenefits = 0,
     pvFixed = 0,
     pvVariable = 0;
   for (let m = 1; m <= months; m++) {
     const yr = Math.floor((m - 1) / 12),
-      active = m - p.delay - s.delay;
-    const ramp = active <= 0 ? 0 : Math.min(active / Math.max(1, p.ramp), 1);
+      active = m - effDelay - s.delay;
+    const ramp = active <= 0 ? 0 : Math.min(active / effRamp, 1);
+    const building = Math.min(1, Math.max(0, fullAt - (m - 1))),
+      teamCost =
+        s.teamCost === false
+          ? 0
+          : ((((building * team.buildCost + (1 - building) * team.runCost) / 12) * s.costFactor) / 100);
+    totalTeam += teamCost;
     const usage = (p.adoption / 100) * ramp * Math.pow(1 + p.growth / 100, yr),
       benefit = (gross / 12) * usage,
-      fixed = (op / 12) * Math.pow(1 + p.costGrowth / 100, yr),
+      fixed = (op / 12) * Math.pow(1 + p.costGrowth / 100, yr) + teamCost,
       variable = ((((p.unitCost || 0) * (p.volume || 0)) / 12) * usage * s.costFactor) / 100,
       cost = fixed + variable,
       net = benefit - cost,
@@ -439,17 +516,21 @@ export function calculate(p, s = defaults) {
     npv += pv;
     totalBenefits += benefit;
     totalCosts += cost;
-    yearly[yr] ??= { year: yr + 1, benefit: 0, cost: 0, net: 0 };
+    yearly[yr] ??= { year: yr + 1, benefit: 0, cost: 0, net: 0, team: 0 };
+    yearly[yr].team += teamCost;
     yearly[yr].benefit += benefit;
     yearly[yr].cost += cost;
     yearly[yr].net += net;
   }
   const probability = (s['prob' + p.stage] ?? 100) / 100,
     steadyVolume = ((p.volume || 0) * p.adoption) / 100,
+    runTeam = s.teamCost === false ? 0 : (team.runCost * s.costFactor) / 100,
     unitCost =
-      steadyVolume > 0 ? (op + ((p.unitCost || 0) * steadyVolume * s.costFactor) / 100) / steadyVolume : 0,
+      steadyVolume > 0
+        ? (op + runTeam + ((p.unitCost || 0) * steadyVolume * s.costFactor) / 100) / steadyVolume
+        : 0,
     unitBenefit = steadyVolume > 0 ? (gross * p.adoption) / 100 / steadyVolume : 0;
-  const h = health(p),
+  const h = health(p, s),
     ready = readiness(p),
     comply = compliance(p);
   let recommendation =
@@ -485,6 +566,12 @@ export function calculate(p, s = defaults) {
         : null,
     readiness: ready,
     compliance: comply,
+    team: {
+      ...team,
+      totalCost: totalTeam,
+      monthsToFull: fullAt,
+      baseMonthsToFull: p.delay + s.delay + Math.max(1, p.ramp),
+    },
     roi: (totalBenefits - totalCosts) / totalCosts,
     capitalROI: (totalBenefits - totalCosts) / cap,
     referencePayback: ((setup(p) + operating(p)) / (p.direct + capacity - operating(p))) * 12,

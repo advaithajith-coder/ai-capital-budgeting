@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculate, defaults, examples, irr, health, readiness, compliance, paybackMonths } from '../dist/model.js';
+import { calculate, defaults, examples, irr, health, readiness, compliance, paybackMonths, staffing } from '../dist/model.js';
 const simple = {
   ...examples[0],
   upfront: 1000,
@@ -18,6 +18,10 @@ const simple = {
   delay: 0,
   growth: 0,
   costGrowth: 0,
+  // No shared-team staffing, so these tests isolate the cash mechanics.
+  need: {},
+  alloc: {},
+  runNeed: 0,
 };
 test('Known monthly cash schedule gives correct NPV, ROI and payback', () => {
   const r = calculate(simple, { ...defaults, rate: 0, years: 2 });
@@ -157,4 +161,35 @@ test('Payback that reverses is not reported until cash is recovered again', () =
   assert.ok(Math.abs(paybackMonths([-100, 60, 60]) - (1 + 40 / 60)) < 1e-9);
   assert.equal(paybackMonths([-100, 60, 60, -50]), null);
   assert.ok(Math.abs(paybackMonths([-100, 60, 60, -50, 100]) - 3.3) < 1e-9);
+});
+const oneRole = { ...defaults, rate: 0, years: 1, team: [{ id: 'ml', name: 'ML engineers', headcount: 4, cost: 120000 }] };
+test('Assigned team is charged in full while building, then only the run share', () => {
+  const r = calculate({ ...simple, direct: 0, delay: 2, need: { ml: 1 }, alloc: { ml: 1 }, runNeed: 0.5 }, oneRole);
+  assert.equal(r.team.monthsToFull, 3);
+  assert.deepEqual(r.flows.slice(1, 6), [-10000, -10000, -10000, -5000, -5000]);
+  assert.equal(r.team.totalCost, 3 * 10000 + 9 * 5000);
+  assert.equal(r.yearly[0].team, r.team.totalCost);
+});
+test('Under-staffing stretches delivery, no one in a needed role stalls it', () => {
+  const p = { ...simple, delay: 2, ramp: 2, need: { ml: 2 }, runNeed: 1 };
+  assert.equal(calculate({ ...p, alloc: { ml: 2 } }, oneRole).team.monthsToFull, 4);
+  const half = calculate({ ...p, alloc: { ml: 1 } }, oneRole);
+  assert.equal(half.team.monthsToFull, 8);
+  assert.equal(half.flows[4], -10000);
+  const stalled = calculate({ ...p, alloc: { ml: 0 } }, oneRole);
+  assert.equal(stalled.totalBenefits, 0);
+  assert.equal(stalled.health.signals.at(-1).level, 2);
+});
+test('Over-staffing speeds delivery with diminishing returns, capped at half the time', () => {
+  const p = { ...simple, delay: 4, ramp: 4, need: { ml: 1 }, runNeed: 1 };
+  assert.ok(Math.abs(staffing({ ...p, alloc: { ml: 2 } }, oneRole).factor - Math.SQRT1_2) < 1e-12);
+  assert.equal(calculate({ ...p, alloc: { ml: 4 } }, oneRole).team.monthsToFull, 4);
+  assert.equal(staffing({ ...p, alloc: { ml: 9 } }, { ...oneRole, team: [{ ...oneRole.team[0], headcount: 9 }] }).factor, 0.5);
+});
+test('Switching team cost off keeps staffing delays but removes the charge', () => {
+  const p = { ...simple, delay: 2, need: { ml: 2 }, alloc: { ml: 1 }, runNeed: 1 };
+  const off = calculate(p, { ...oneRole, teamCost: false });
+  assert.equal(off.team.totalCost, 0);
+  assert.equal(off.team.monthsToFull, calculate(p, oneRole).team.monthsToFull);
+  assert.equal(off.flows[4], 0);
 });
