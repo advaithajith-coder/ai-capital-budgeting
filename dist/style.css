@@ -1379,3 +1379,15 @@ input.mini.wide {
   margin-left: 6px;
   cursor: help;
 }
+.team-table .name-button small {
+  display: block;
+  margin-top: 2px;
+}
+.prob-fields {
+  align-items: end;
+}
+.wizard-steps button {
+  white-space: normal;
+  overflow: visible;
+  line-height: 1.25;
+}

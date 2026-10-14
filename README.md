@@ -4,6 +4,8 @@ An executive decision workspace for deciding which AI automation projects deserv
 
 Five editable illustrative projects use the reference's AI value, evidence and health framework.
 
+![Portfolio overview: NPV with risk-adjusted value, payback, ROI, initial capital and Year-1 funding, cumulative cash flow and capital allocation](docs/screenshots/overview.png)
+
 ## Why it matters
 
 ### For the CFO: put capital where the evidence is strongest
@@ -25,6 +27,45 @@ Five editable illustrative projects use the reference's AI value, evidence and h
 - **Delivery readiness and compliance.** Data readiness, integration, vendor dependency and team capacity (set from actual staffing), plus security, legal and privacy, and model-risk approvals. A pilot or production project missing a required approval is flagged for intervention.
 - **Operational health.** Adoption, data pipeline, model accuracy and trend, sponsor engagement, team staffing and compute, with escalation rules.
 - **A shared language with finance.** Technical risks feed the same probability, cost and timing that finance uses, so engineering trade-offs show up as dollars and months.
+
+## Adding a project: the questionnaire
+
+**＋ Add automation** opens an eight-step questionnaire that builds the whole business case. Nothing is copied from an example, so every number in a new case was entered on purpose.
+
+1. **The idea**: name, department, executive owner, stage and the problem it solves.
+2. **One-time costs**: implementation, data preparation, training and change management.
+3. **Running costs**: compute, storage, maintenance, human oversight, and optional usage-based cost per transaction with annual volume.
+4. **Estimated benefits**: direct cash savings, indirect gains and the share that is real cash, and recovered hours (kept separate from cash), with a reminder not to count the same labour twice.
+5. **Rollout**: adoption, ramp-up, delay, and the tech team needed by role. Free people are assigned from the bench.
+6. **Readiness**: delivery risks, data sensitivity, AI risk level, and security, legal and model-risk approvals.
+7. **Evidence**: the business KPI with baseline, target and latest value, sponsor engagement and model health.
+8. **Review**: every section with an edit link, the full result and warnings (unverified baseline, possible double counting, missing approvals, people not free to assign).
+
+Required fields are checked before moving on, unknowns can be left blank and are flagged rather than guessed, and a live preview of Year-1 funding, NPV, risk-adjusted NPV and payback updates as you type.
+
+| A step with the live preview | The review step |
+|---|---|
+| ![Questionnaire step: estimated benefits with live preview](docs/screenshots/questionnaire.png) | ![Questionnaire review: every section, result and warnings](docs/screenshots/questionnaire-review.png) |
+
+## A tour of the workspace
+
+**Project detail**: every assumption editable in place, with NPV, payback, ROI, IRR, risk-adjusted and evidence-adjusted NPV, Year-1 funding and a monthly cash audit.
+
+![Project detail panel for Vision quality control](docs/screenshots/project-detail.png)
+
+**Scenario lab**: the whole portfolio or a single project, what has to be true to break even, base/downside/upside comparison and sensitivity tables.
+
+![Scenario lab focused on the customer service copilot](docs/screenshots/scenario-lab.png)
+
+**Tech team**: role pools, bench, moves between projects, and each project's staffing, time to full benefit, team cost and NPV.
+
+![Tech team allocation](docs/screenshots/tech-team.png)
+
+**Evidence & health**: forecast vs evidence-adjusted value, then per-project health, probability of success, readiness, compliance and unit cost.
+
+![Evidence and health](docs/screenshots/evidence.png)
+
+Screenshots show the illustrative example portfolio with internal team cost included, which is why several projects and the portfolio are negative. Switching team cost off on the Tech team page shows the external-cost-only view.
 
 ## Run it
 
