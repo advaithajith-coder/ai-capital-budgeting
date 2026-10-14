@@ -45,7 +45,9 @@ const money = v =>
     return ticks;
   },
   pct = v => (v === null ? 'N/A' : (v * 100).toFixed(1) + '%'),
-  pb = v => (v === null ? 'Beyond horizon' : v.toFixed(1) + ' mo'),
+  // Payback reads in months under two years, otherwise in years with months alongside.
+  duration = v => (v < 24 ? v.toFixed(1) + ' mo' : (v / 12).toFixed(1) + ' yrs (' + Math.round(v) + ' mo)'),
+  pb = v => (v === null ? 'Beyond horizon' : duration(v)),
   irrShort = v => (v !== null && v > 1 ? '>100%' : pct(v));
 const unitMoney = v =>
   new Intl.NumberFormat('en-US', {
@@ -162,7 +164,7 @@ function metrics(a = portfolio(), label = 'Portfolio') {
       )
       .join('')}</div>`;
   const roi = a.cost ? (a.benefit - a.cost) / a.cost : null;
-  return `<div class="metrics"><div class="metric"><div class="metric-top">${label} NPV <span class="metric-icon">↗</span></div><strong>${short(a.npv)}</strong><small class="${a.npv > 0 ? 'green' : ''}">Risk-adjusted ${short(a.rnpv)} · ${state.settings.years} yrs at ${state.settings.rate}%</small></div><div class="metric"><div class="metric-top">${label} payback <span class="metric-icon">◷</span></div><strong>${a.payback === null ? '—' : a.payback.toFixed(1) + ' mo'}</strong><small>${a.payback === null ? 'Not reached in selected horizon' : 'Undiscounted monthly cash flows'}</small></div><div class="metric"><div class="metric-top">${label} ROI <span class="metric-icon">⌁</span></div><strong>${pct(roi)}</strong><small>Total cost basis · ${state.settings.years}-year horizon</small></div><div class="metric"><div class="metric-top">Initial capital <span class="metric-icon">▣</span></div><strong>${short(a.cap)}</strong><small>Year-1 funding ${short(a.funding)} incl. running costs</small></div></div>`;
+  return `<div class="metrics"><div class="metric"><div class="metric-top">${label} NPV <span class="metric-icon">↗</span></div><strong>${short(a.npv)}</strong><small class="${a.npv > 0 ? 'green' : ''}">Risk-adjusted ${short(a.rnpv)} · ${state.settings.years} yrs at ${state.settings.rate}%</small></div><div class="metric"><div class="metric-top">${label} payback <span class="metric-icon">◷</span></div><strong>${a.payback === null ? '—' : a.payback < 24 ? a.payback.toFixed(1) + ' mo' : (a.payback / 12).toFixed(1) + ' yrs'}</strong><small>${a.payback === null ? 'Not reached in selected horizon' : (a.payback < 24 ? '' : Math.round(a.payback) + ' months · ') + 'Undiscounted monthly cash flows'}</small></div><div class="metric"><div class="metric-top">${label} ROI <span class="metric-icon">⌁</span></div><strong>${pct(roi)}</strong><small>Total cost basis · ${state.settings.years}-year horizon</small></div><div class="metric"><div class="metric-top">Initial capital <span class="metric-icon">▣</span></div><strong>${short(a.cap)}</strong><small>Year-1 funding ${short(a.funding)} incl. running costs</small></div></div>`;
 }
 function cashChart() {
   const a = portfolio();
